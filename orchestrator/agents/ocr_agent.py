@@ -8,8 +8,8 @@ def extract_text_s3(s3_key):
     try:
         bucket = os.getenv("AWS_S3_BUCKET")
 
-        print("\n🔍 Reading from S3:", s3_key)
-        print("🪣 Bucket:", bucket)
+        print("\n Reading from S3:", s3_key)
+        print("Bucket:", bucket)
 
         if not bucket:
             raise Exception("AWS_S3_BUCKET is missing in env")
@@ -35,9 +35,9 @@ def extract_text_s3(s3_key):
             if block["BlockType"] == "LINE":
                 text += block["Text"] + "\n"
 
-        print("📄 OCR TEXT LENGTH:", len(text))
+        print("OCR TEXT LENGTH:", len(text))
         return text
 
     except Exception as e:
-        print("❌ OCR ERROR:", str(e))
+        print("OCR ERROR:", str(e))
         return ""

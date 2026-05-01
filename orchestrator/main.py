@@ -27,9 +27,7 @@ def health():
     return {"status": "ok"}
 
 
-# -------------------------
-# SAFE MERGE FUNCTION
-# -------------------------
+
 def merge_docs(docs):
 
     def safe_get(doc, key):

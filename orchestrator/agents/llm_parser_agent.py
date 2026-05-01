@@ -5,9 +5,7 @@ from groq import Groq
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# -------------------------------
-# HELPERS
-# -------------------------------
+
 
 def clean_number(val):
     try:
@@ -16,9 +14,6 @@ def clean_number(val):
         return None
 
 
-# -------------------------------
-# DOCUMENT TYPE DETECTION
-# -------------------------------
 
 def detect_document_type(text):
     t = text.lower()
@@ -38,9 +33,6 @@ def detect_document_type(text):
     return "unknown"
 
 
-# -------------------------------
-# GENERIC EXTRACTIONS
-# -------------------------------
 
 def extract_name(text):
     patterns = [
@@ -77,9 +69,6 @@ def extract_account(text):
     return match.group(1) if match else None
 
 
-# -------------------------------
-# SALARY
-# -------------------------------
 
 def extract_salary(text):
 
@@ -97,9 +86,6 @@ def extract_salary(text):
     return None
 
 
-# -------------------------------
-# PROPERTY VALUE
-# -------------------------------
 
 def extract_property(text):
 
@@ -111,9 +97,6 @@ def extract_property(text):
     return None
 
 
-# -------------------------------
-# BANK BALANCE EXTRACTION (FIXED)
-# -------------------------------
 
 def extract_balance_history(text):
 
@@ -122,7 +105,7 @@ def extract_balance_history(text):
 
     for line in lines:
 
-        # 🔥 flexible date match (OCR safe)
+        
         if re.search(r"\d{2}[-\s][A-Za-z]{3}[-\s]\d{4}", line):
 
             nums = re.findall(r"[\d,]+\.\d+", line)
@@ -133,7 +116,7 @@ def extract_balance_history(text):
                 if val and 10000 < val < 10000000:
                     balances.append(val)
 
-    # 🔥 stronger fallback
+    
     if len(balances) < 5:
         print("⚠️ fallback balance parsing...")
 
@@ -149,10 +132,6 @@ def extract_balance_history(text):
 
     return balances[-12:]
 
-
-# -------------------------------
-# COLLATERAL BUYER EXTRACTION
-# -------------------------------
 
 def extract_buyer_details(text):
 
@@ -178,10 +157,6 @@ def extract_buyer_details(text):
     )
 
 
-# -------------------------------
-# SAFE JSON PARSE
-# -------------------------------
-
 def safe_json_parse(text):
     try:
         text = text.replace("```json", "").replace("```", "").strip()
@@ -189,10 +164,6 @@ def safe_json_parse(text):
     except:
         return {}
 
-
-# -------------------------------
-# LLM FALLBACK (SAFE)
-# -------------------------------
 
 def parse_with_llm(text):
 
@@ -230,9 +201,6 @@ TEXT:
     return safe_json_parse(res.choices[0].message.content)
 
 
-# -------------------------------
-# MAIN PARSER
-# -------------------------------
 
 def parse_document(text):
 
@@ -257,7 +225,6 @@ def parse_document(text):
 
     elif doc_type == "itr":
 
-        # 🔥 FIXED NAME EXTRACTION
         name_match = re.search(r"Name\s*\n\s*([A-Za-z ]+)", text)
         if name_match:
             name = name_match.group(1).strip()
@@ -283,7 +250,6 @@ def parse_document(text):
         "bank_balance_history": balances
     }
 
-    # 🔥 NO LLM FOR BANK DOCS
     if doc_type != "bank" and (not data["name"] or not data["pan"]):
         print("⚠️ LLM fallback triggered...")
         llm_data = parse_with_llm(text)
@@ -292,5 +258,5 @@ def parse_document(text):
             if not data[key] and llm_data.get(key):
                 data[key] = llm_data[key]
 
-    print("✅ FINAL PARSED:", data)
+    print("FINAL PARSED:", data)
     return data
