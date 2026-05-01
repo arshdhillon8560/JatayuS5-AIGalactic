@@ -5,9 +5,9 @@ from groq import Groq
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# -------------------------
+# -------------------------------
 # HELPERS
-# -------------------------
+# -------------------------------
 
 def clean_number(val):
     try:
@@ -16,21 +16,48 @@ def clean_number(val):
         return None
 
 
-def safe_json_parse(text):
-    try:
-        text = text.replace("```json", "").replace("```", "").strip()
-        return json.loads(text)
-    except:
-        return {}
+# -------------------------------
+# DOCUMENT TYPE DETECTION
+# -------------------------------
+
+def detect_document_type(text):
+    text_lower = text.lower()
+
+    if "account statement" in text_lower:
+        return "bank"
+
+    if "salary slip" in text_lower or "net salary" in text_lower:
+        return "salary"
+
+    if "income tax return" in text_lower:
+        return "itr"
+
+    if "sale deed" in text_lower:
+        return "collateral"
+
+    return "unknown"
 
 
-# -------------------------
-# BASIC EXTRACTIONS
-# -------------------------
+# -------------------------------
+# NAME EXTRACTION (FIXED)
+# -------------------------------
 
 def extract_name(text):
-    match = re.search(r"(Employee Name|Name)\s*[:\-]?\s*([A-Za-z ]+)", text, re.I)
-    return match.group(2).strip() if match else None
+
+    patterns = [
+        r"Name\s*[:\-]?\s*([A-Za-z ]+)",
+        r"Name\s*\n\s*([A-Za-z ]+)"
+    ]
+
+    for p in patterns:
+        match = re.search(p, text, re.I)
+        if match:
+            name = match.group(1).strip()
+
+            if name.lower() not in ["address", "india", "government"]:
+                return name
+
+    return None
 
 
 def extract_pan(text):
@@ -44,108 +71,126 @@ def extract_aadhaar(text):
 
 
 def extract_account(text):
-    matches = re.findall(r"\b\d{12,18}\b", text)
-    return matches[0] if matches else None
+    match = re.search(r"\b\d{12,18}\b", text)
+    return match.group(0) if match else None
 
 
-# -------------------------
+# -------------------------------
 # SALARY (FIXED)
-# -------------------------
+# -------------------------------
 
 def extract_salary(text):
 
     patterns = [
-        r"Net Salary[^\d]*([\d,]+)",
-        r"Net Pay[^\d]*([\d,]+)",
-        r"Take Home[^\d]*([\d,]+)",
-        r"Salary Credit[^\d]*([\d,]+)",
+        r"NET SALARY.*?([\d,]+\.\d+)",
+        r"Net Salary.*?([\d,]+\.\d+)",
+        r"Salary Credit.*?([\d,]+\.\d+)"
     ]
 
     for p in patterns:
-        match = re.search(p, text, re.I)
+        match = re.search(p, text, re.S | re.I)
         if match:
-            val = clean_number(match.group(1))
-            if val and val > 5000:
-                return val
+            return clean_number(match.group(1))
 
     return None
 
 
-# -------------------------
-# ITR INCOME
-# -------------------------
-
-def extract_itr_income(text):
-
-    patterns = [
-        r"Gross Total Income[^\d]*([\d,]+)",
-        r"Total Income[^\d]*([\d,]+)",
-        r"Income[^\d]*([\d,]+)",
-    ]
-
-    for p in patterns:
-        match = re.search(p, text, re.I)
-        if match:
-            val = clean_number(match.group(1))
-
-            # filter garbage like year/pincode
-            if val and val > 50000:
-                return val
-
-    return None
-
-
-# -------------------------
-# PROPERTY VALUE
-# -------------------------
+# -------------------------------
+# PROPERTY VALUE (FIXED)
+# -------------------------------
 
 def extract_property(text):
-    matches = re.findall(r"₹\s*([\d,]+)", text)
-    values = [clean_number(x) for x in matches]
 
-    # choose realistic property value
-    values = [v for v in values if v and v > 50000]
+    match = re.search(r"₹\s*([\d,]+)", text)
 
-    return max(values) if values else None
+    if match:
+        return clean_number(match.group(1))
+
+    return None
 
 
-# -------------------------
-# BANK BALANCE (CRITICAL FIX)
-# -------------------------
+# -------------------------------
+# BANK BALANCE EXTRACTION (🔥 FIXED)
+# -------------------------------
 
 def extract_balance_history(text):
 
-    lines = text.split("\n")
     balances = []
+    lines = text.split("\n")
 
     for line in lines:
-        if any(word in line.lower() for word in ["balance", "bal"]):
+
+        # detect transaction row (date present)
+        if re.search(r"\d{2}-[A-Za-z]{3}-\d{4}", line):
 
             nums = re.findall(r"[\d,]+\.\d+", line)
 
-            for n in nums:
-                val = clean_number(n)
+            if nums:
+                val = clean_number(nums[-1])  # last column = balance
 
-                # filter unrealistic numbers
                 if val and 10000 < val < 10000000:
                     balances.append(val)
 
-    # fallback if nothing found
-    if not balances:
+    # fallback
+    if len(balances) < 3:
+        print("⚠️ fallback balance parsing...")
+
         nums = re.findall(r"[\d,]+\.\d+", text)
-        for n in nums:
-            val = clean_number(n)
-            if val and 10000 < val < 10000000:
-                balances.append(val)
+        cleaned = [clean_number(n) for n in nums]
+
+        balances = [
+            x for x in cleaned
+            if x and 50000 < x < 10000000
+        ]
 
     print("💰 Extracted balances:", balances)
 
     return balances[-12:]
 
 
-# -------------------------
+# -------------------------------
+# BUYER EXTRACTION (🔥 FIXED)
+# -------------------------------
+
+def extract_buyer_details(text):
+
+    section = re.search(
+        r"BUYER DETAILS(.*?)(PROPERTY DETAILS|CONSIDERATION)",
+        text,
+        re.S | re.I
+    )
+
+    if not section:
+        return None, None, None
+
+    block = section.group(1)
+
+    name = re.search(r"Name\s*[:\-]?\s*([A-Za-z ]+)", block)
+    pan = re.search(r"[A-Z]{5}[0-9]{4}[A-Z]", block)
+    aadhaar = re.search(r"\b\d{12}\b", block)
+
+    return (
+        name.group(1).strip() if name else None,
+        pan.group(0) if pan else None,
+        aadhaar.group(0) if aadhaar else None
+    )
+
+
+# -------------------------------
+# SAFE JSON PARSE
+# -------------------------------
+
+def safe_json_parse(text):
+    try:
+        text = text.replace("```json", "").replace("```", "").strip()
+        return json.loads(text)
+    except:
+        return {}
+
+
+# -------------------------------
 # LLM FALLBACK
-# -------------------------
+# -------------------------------
 
 def parse_with_llm(text):
 
@@ -153,11 +198,13 @@ def parse_with_llm(text):
 Extract structured JSON from OCR text.
 
 Rules:
-- Extract correct NAME, PAN, Aadhaar
-- Extract monthly income (if available)
-- Extract ONLY valid bank balances (ignore PIN, phone numbers)
-- Extract property value if present
-- Return clean JSON
+- Extract BUYER details only
+- Extract correct PAN and Aadhaar
+- Extract ALL balance values
+- Ignore transaction IDs
+- If missing → null
+
+Return JSON ONLY:
 
 {{
 "name": "",
@@ -173,56 +220,64 @@ TEXT:
 {text}
 """
 
-    try:
-        res = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
-        )
+    res = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
 
-        return safe_json_parse(res.choices[0].message.content)
-
-    except Exception as e:
-        print("❌ LLM ERROR:", e)
-        return {}
+    return safe_json_parse(res.choices[0].message.content)
 
 
-# -------------------------
-# VALIDATION
-# -------------------------
-
-def validate_pan(pan):
-    return pan if pan and re.match(r"[A-Z]{5}[0-9]{4}[A-Z]", pan) else None
-
-
-def validate_aadhaar(a):
-    return a if a and len(a) == 12 else None
-
-
-# -------------------------
+# -------------------------------
 # MAIN PARSER
-# -------------------------
+# -------------------------------
 
 def parse_document(text):
 
-    print("\n🧾 OCR SAMPLE:\n", text[:300])
+    doc_type = detect_document_type(text)
+    print("📄 Document Type:", doc_type)
+
+    name = pan = aadhaar = account = None
+    income = property_value = None
+    balances = []
+
+    if doc_type == "bank":
+        name = extract_name(text)
+        account = extract_account(text)
+        balances = extract_balance_history(text)
+
+    elif doc_type == "salary":
+        name = extract_name(text)
+        pan = extract_pan(text)
+        aadhaar = extract_aadhaar(text)
+        account = extract_account(text)
+        income = extract_salary(text)
+
+    elif doc_type == "itr":
+        name = extract_name(text)
+        pan = extract_pan(text)
+        account = extract_account(text)
+
+        match = re.search(r"Total Income.*?([\d,]+)", text, re.I)
+        if match:
+            income = clean_number(match.group(1))
+
+    elif doc_type == "collateral":
+        name, pan, aadhaar = extract_buyer_details(text)
+        property_value = extract_property(text)
 
     data = {
-        "name": extract_name(text),
-        "pan": extract_pan(text),
-        "aadhaar": extract_aadhaar(text),
-        "account_number": extract_account(text),
-        "monthly_income": extract_salary(text) or extract_itr_income(text),
-        "property_value": extract_property(text),
-        "bank_balance_history": extract_balance_history(text)
+        "name": name,
+        "pan": pan,
+        "aadhaar": aadhaar,
+        "account_number": account,
+        "monthly_income": income,
+        "property_value": property_value,
+        "bank_balance_history": balances
     }
 
-    # 🔥 smart fallback trigger
-    if (
-        not data["name"]
-        or not data["pan"]
-        or not data["monthly_income"]
-        or len(data["bank_balance_history"]) < 3
-    ):
+    # 🔥 LLM fallback only if critical data missing
+    if not data["name"] or not data["pan"]:
         print("⚠️ LLM fallback triggered...")
         llm_data = parse_with_llm(text)
 
@@ -230,17 +285,5 @@ def parse_document(text):
             if not data[key] and llm_data.get(key):
                 data[key] = llm_data[key]
 
-    # validation
-    data["pan"] = validate_pan(data["pan"])
-    data["aadhaar"] = validate_aadhaar(data["aadhaar"])
-
-    # ensure clean list
-    if isinstance(data["bank_balance_history"], list):
-        data["bank_balance_history"] = [
-            int(x) for x in data["bank_balance_history"]
-            if isinstance(x, (int, float)) and x > 10000
-        ]
-
     print("✅ FINAL PARSED:", data)
-
     return data
