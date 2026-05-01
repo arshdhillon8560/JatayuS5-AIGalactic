@@ -21,29 +21,28 @@ def clean_number(val):
 # -------------------------------
 
 def detect_document_type(text):
-    text_lower = text.lower()
+    t = text.lower()
 
-    if "account statement" in text_lower:
+    if "account statement" in t:
         return "bank"
 
-    if "salary slip" in text_lower or "net salary" in text_lower:
+    if "salary slip" in t or "net salary" in t:
         return "salary"
 
-    if "income tax return" in text_lower:
+    if "income tax return" in t:
         return "itr"
 
-    if "sale deed" in text_lower:
+    if "sale deed" in t or "registration" in t:
         return "collateral"
 
     return "unknown"
 
 
 # -------------------------------
-# NAME EXTRACTION (FIXED)
+# GENERIC EXTRACTIONS
 # -------------------------------
 
 def extract_name(text):
-
     patterns = [
         r"Name\s*[:\-]?\s*([A-Za-z ]+)",
         r"Name\s*\n\s*([A-Za-z ]+)"
@@ -54,6 +53,7 @@ def extract_name(text):
         if match:
             name = match.group(1).strip()
 
+            # avoid common OCR mistakes
             if name.lower() not in ["address", "india", "government"]:
                 return name
 
@@ -71,12 +71,14 @@ def extract_aadhaar(text):
 
 
 def extract_account(text):
-    match = re.search(r"\b\d{12,18}\b", text)
-    return match.group(0) if match else None
+    match = re.search(
+        r"Account Number\s*[:\-]?\s*(\d{10,18})", text, re.I
+    )
+    return match.group(1) if match else None
 
 
 # -------------------------------
-# SALARY (FIXED)
+# SALARY
 # -------------------------------
 
 def extract_salary(text):
@@ -96,7 +98,7 @@ def extract_salary(text):
 
 
 # -------------------------------
-# PROPERTY VALUE (FIXED)
+# PROPERTY VALUE
 # -------------------------------
 
 def extract_property(text):
@@ -110,7 +112,7 @@ def extract_property(text):
 
 
 # -------------------------------
-# BANK BALANCE EXTRACTION (🔥 FIXED)
+# BANK BALANCE EXTRACTION (FIXED)
 # -------------------------------
 
 def extract_balance_history(text):
@@ -120,19 +122,19 @@ def extract_balance_history(text):
 
     for line in lines:
 
-        # detect transaction row (date present)
-        if re.search(r"\d{2}-[A-Za-z]{3}-\d{4}", line):
+        # 🔥 flexible date match (OCR safe)
+        if re.search(r"\d{2}[-\s][A-Za-z]{3}[-\s]\d{4}", line):
 
             nums = re.findall(r"[\d,]+\.\d+", line)
 
             if nums:
-                val = clean_number(nums[-1])  # last column = balance
+                val = clean_number(nums[-1])
 
                 if val and 10000 < val < 10000000:
                     balances.append(val)
 
-    # fallback
-    if len(balances) < 3:
+    # 🔥 stronger fallback
+    if len(balances) < 5:
         print("⚠️ fallback balance parsing...")
 
         nums = re.findall(r"[\d,]+\.\d+", text)
@@ -149,7 +151,7 @@ def extract_balance_history(text):
 
 
 # -------------------------------
-# BUYER EXTRACTION (🔥 FIXED)
+# COLLATERAL BUYER EXTRACTION
 # -------------------------------
 
 def extract_buyer_details(text):
@@ -189,7 +191,7 @@ def safe_json_parse(text):
 
 
 # -------------------------------
-# LLM FALLBACK
+# LLM FALLBACK (SAFE)
 # -------------------------------
 
 def parse_with_llm(text):
@@ -198,9 +200,9 @@ def parse_with_llm(text):
 Extract structured JSON from OCR text.
 
 Rules:
-- Extract BUYER details only
-- Extract correct PAN and Aadhaar
-- Extract ALL balance values
+- Extract BUYER details
+- Extract PAN, Aadhaar
+- Extract ALL balances
 - Ignore transaction IDs
 - If missing → null
 
@@ -254,7 +256,12 @@ def parse_document(text):
         income = extract_salary(text)
 
     elif doc_type == "itr":
-        name = extract_name(text)
+
+        # 🔥 FIXED NAME EXTRACTION
+        name_match = re.search(r"Name\s*\n\s*([A-Za-z ]+)", text)
+        if name_match:
+            name = name_match.group(1).strip()
+
         pan = extract_pan(text)
         account = extract_account(text)
 
@@ -276,8 +283,8 @@ def parse_document(text):
         "bank_balance_history": balances
     }
 
-    # 🔥 LLM fallback only if critical data missing
-    if not data["name"] or not data["pan"]:
+    # 🔥 NO LLM FOR BANK DOCS
+    if doc_type != "bank" and (not data["name"] or not data["pan"]):
         print("⚠️ LLM fallback triggered...")
         llm_data = parse_with_llm(text)
 
