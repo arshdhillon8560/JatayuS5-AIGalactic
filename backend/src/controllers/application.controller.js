@@ -173,7 +173,7 @@ exports.uploadDocuments = async (req, res) => {
       VALUES($1,$2,$3,$4,$5,$6)`,
       [
         application_id,
-        bank.key,   // 🔥 store KEY instead of URL
+        bank.key,   
         salary.key,
         itr.key,
         collateral?.key || null,

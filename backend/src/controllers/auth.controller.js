@@ -115,7 +115,6 @@ exports.login = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    // -------- RESPONSE --------
     res.json({
       message: "Login successful",
       token,
