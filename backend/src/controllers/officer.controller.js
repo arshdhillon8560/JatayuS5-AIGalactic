@@ -13,7 +13,7 @@ exports.getEscalatedApplications = async (req, res) => {
          risk_band,
          created_at
        FROM applications 
-       WHERE status = 'ESCALATED'
+       WHERE final_decision = 'ESCALATED'
        ORDER BY created_at DESC`
     );
 
