@@ -92,10 +92,9 @@ exports.getApplicationDetails = async (req, res) => {
 };
 
 
-
-
 exports.updateDecision = async (req, res) => {
   try {
+
     const { application_id, decision, reason } = req.body;
 
     if (!application_id || !decision) {
@@ -110,24 +109,74 @@ exports.updateDecision = async (req, res) => {
       });
     }
 
-    // update application
+
     await db.query(
-      `UPDATE applications 
-       SET status = $1,
-           final_decision = $1,
-           reason = $2,
-           updated_at = NOW()
-       WHERE application_id = $3`,
-      [decision, reason || null, application_id]
+      `
+      UPDATE applications
+      SET
+        status = $1,
+        final_decision = $1,
+        reason = $2,
+        updated_at = NOW()
+      WHERE application_id = $3
+      `,
+      [
+        decision,
+        reason || null,
+        application_id
+      ]
     );
 
-    // also log into agent_results (audit trail)
-    await db.query(
-      `INSERT INTO agent_results
-       (application_id, final_decision, decision_reason)
-       VALUES ($1,$2,$3)`,
-      [application_id, decision, reason || "Manual decision by officer"]
+
+    const existing = await db.query(
+      `
+      SELECT id
+      FROM agent_results
+      WHERE application_id = $1
+      ORDER BY created_at DESC
+      LIMIT 1
+      `,
+      [application_id]
     );
+
+    
+    if (existing.rows.length > 0) {
+
+      await db.query(
+        `
+        UPDATE agent_results
+        SET
+          final_decision = $1,
+          decision_reason = $2
+        WHERE id = $3
+        `,
+        [
+          decision,
+          reason || "Manual decision by officer",
+          existing.rows[0].id
+        ]
+      );
+
+    } else {
+
+      
+      await db.query(
+        `
+        INSERT INTO agent_results
+        (
+          application_id,
+          final_decision,
+          decision_reason
+        )
+        VALUES ($1,$2,$3)
+        `,
+        [
+          application_id,
+          decision,
+          reason || "Manual decision by officer"
+        ]
+      );
+    }
 
     res.json({
       message: "Decision updated successfully",
@@ -137,7 +186,11 @@ exports.updateDecision = async (req, res) => {
     });
 
   } catch (err) {
+
     console.error("DECISION ERROR:", err);
-    res.status(500).json({ error: err.message });
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 };
