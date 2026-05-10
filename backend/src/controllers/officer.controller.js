@@ -29,42 +29,47 @@ exports.getEscalatedApplications = async (req, res) => {
 };
 
 
-
-
 exports.getApplicationDetails = async (req, res) => {
+
   try {
+
     const { id } = req.params;
 
     const result = await db.query(
       `
-      SELECT 
+      SELECT
+
+        -- APPLICATION
         a.*,
 
-        ap.name, ap.age, ap.gender, ap.pan_number, ap.aadhaar_number,
+        -- PROFILE
+        ap.*,
 
-        e.employment_type, e.employer_name, e.job_title,
-        e.years_in_current_job, e.monthly_income,
+        -- EMPLOYMENT
+        e.*,
 
-        f.existing_loans, f.existing_emi,
-        f.credit_card_limit, f.credit_card_balance,
-        f.average_monthly_balance,
+        -- FINANCIAL
+        f.*,
 
-        d.bank_statement_url, d.salary_slip_url,
-        d.itr_document_url, d.collateral_url, d.collateral_type,
+        -- DOCUMENTS
+        d.*,
 
-        ar.credit_pd_score,
-        ar.fraud_probability,
-        ar.collateral_value,
-        ar.collateral_risk,
-        ar.final_decision,
-        ar.decision_reason
+        -- AGENT RESULTS
+        ar.*
 
       FROM applications a
 
-      LEFT JOIN applicant_profiles ap ON ap.application_id = a.application_id
-      LEFT JOIN employment_details e ON e.application_id = a.application_id
-      LEFT JOIN financial_details f ON f.application_id = a.application_id
-      LEFT JOIN documents d ON d.application_id = a.application_id
+      LEFT JOIN applicant_profiles ap
+        ON ap.application_id = a.application_id
+
+      LEFT JOIN employment_details e
+        ON e.application_id = a.application_id
+
+      LEFT JOIN financial_details f
+        ON f.application_id = a.application_id
+
+      LEFT JOIN documents d
+        ON d.application_id = a.application_id
 
       LEFT JOIN LATERAL (
         SELECT *
@@ -80,14 +85,20 @@ exports.getApplicationDetails = async (req, res) => {
     );
 
     if (!result.rows.length) {
-      return res.status(404).json({ message: "Application not found" });
+      return res.status(404).json({
+        message: "Application not found"
+      });
     }
 
     res.json(result.rows[0]);
 
   } catch (err) {
+
     console.error("DETAIL ERROR:", err);
-    res.status(500).json({ error: err.message });
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 };
 

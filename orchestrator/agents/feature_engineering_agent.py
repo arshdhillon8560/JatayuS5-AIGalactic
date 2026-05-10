@@ -2,7 +2,7 @@ def build_ml_input(db, data, consistency_score, emp_verified):
 
     history = data.get("bank_balance_history", [])
     if not history:
-        print("⚠️ No bank history → using fallback")
+        print("No bank history → using fallback")
         history = [data.get("monthly_income", 0)] * 6
 
     account_balance = history[-1]
