@@ -1,10 +1,28 @@
 const db = require("../config/db");
 
+const S3_BASE_URL = process.env.AWS_S3_BASE_URL;
+
+
+const makeFileUrl = (key) => {
+
+  if (!key) return null;
+
+  if (key.startsWith("http")) {
+    return key;
+  }
+
+  return `${S3_BASE_URL}/${key}`;
+};
+
+
 
 exports.getEscalatedApplications = async (req, res) => {
+
   try {
+
     const result = await db.query(
-      `SELECT 
+      `
+      SELECT 
          application_id,
          user_id,
          loan_amount,
@@ -12,9 +30,10 @@ exports.getEscalatedApplications = async (req, res) => {
          loan_purpose,
          risk_band,
          created_at
-       FROM applications 
-       WHERE status = 'ESCALATED'
-       ORDER BY created_at DESC`
+      FROM applications 
+      WHERE status = 'ESCALATED'
+      ORDER BY created_at DESC
+      `
     );
 
     res.json({
@@ -23,8 +42,12 @@ exports.getEscalatedApplications = async (req, res) => {
     });
 
   } catch (err) {
+
     console.error("ESCALATED ERROR:", err);
-    res.status(500).json({ error: err.message });
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 };
 
@@ -85,12 +108,23 @@ exports.getApplicationDetails = async (req, res) => {
     );
 
     if (!result.rows.length) {
+
       return res.status(404).json({
         message: "Application not found"
       });
     }
 
-    res.json(result.rows[0]);
+    const data = result.rows[0];
+
+    data.bank_statement_url = makeFileUrl(data.bank_statement_url);
+
+    data.salary_slip_url = makeFileUrl(data.salary_slip_url);
+
+    data.itr_document_url = makeFileUrl(data.itr_document_url);
+
+    data.collateral_url = makeFileUrl(data.collateral_url);
+
+    res.json(data);
 
   } catch (err) {
 
@@ -103,18 +137,26 @@ exports.getApplicationDetails = async (req, res) => {
 };
 
 
+
 exports.updateDecision = async (req, res) => {
+
   try {
 
-    const { application_id, decision, reason } = req.body;
+    const {
+      application_id,
+      decision,
+      reason
+    } = req.body;
 
     if (!application_id || !decision) {
+
       return res.status(400).json({
         message: "application_id and decision are required"
       });
     }
 
     if (!["APPROVED", "REJECTED"].includes(decision)) {
+
       return res.status(400).json({
         message: "Decision must be APPROVED or REJECTED"
       });
@@ -138,7 +180,6 @@ exports.updateDecision = async (req, res) => {
       ]
     );
 
-
     const existing = await db.query(
       `
       SELECT id
@@ -150,7 +191,6 @@ exports.updateDecision = async (req, res) => {
       [application_id]
     );
 
-    
     if (existing.rows.length > 0) {
 
       await db.query(
@@ -170,7 +210,6 @@ exports.updateDecision = async (req, res) => {
 
     } else {
 
-      
       await db.query(
         `
         INSERT INTO agent_results
