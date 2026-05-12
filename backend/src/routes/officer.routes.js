@@ -31,4 +31,11 @@ router.post(
   officerController.updateDecision
 );
 
+router.post(
+  "/analyze-risk",
+  authMiddleware,
+  roleMiddleware("officer"),
+  officerController.analyzeRisk
+);
+
 module.exports = router;

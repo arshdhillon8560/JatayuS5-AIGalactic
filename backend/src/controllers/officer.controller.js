@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const axios = require("axios");
 
 const S3_BASE_URL = process.env.AWS_S3_BASE_URL;
 
@@ -241,6 +242,153 @@ exports.updateDecision = async (req, res) => {
 
     res.status(500).json({
       error: err.message
+    });
+  }
+};
+
+
+exports.analyzeRisk = async (req, res) => {
+  try {
+    const d = req.body;
+
+    const prompt = `
+You are a senior loan risk analyst.
+
+Analyze the following loan application data and return a risk assessment.
+
+Loan Details:
+- Amount: ₹${d.loan_amount}
+- Tenure: ${d.loan_tenure} months
+- Purpose: ${d.loan_purpose}
+
+Applicant Profile:
+- Age: ${d.age}
+- Employment: ${d.employment_type}
+- Employer: ${d.employer_name}
+- Industry: ${d.industry}
+- Job Title: ${d.job_title}
+- Years in Current Job: ${d.years_in_current_job}
+- Total Experience: ${d.total_work_experience} years
+- KYC Status: ${d.kyc_status}
+- Employment Verified: ${d.employment_verified}
+
+Financial Profile:
+- Monthly Income: ₹${d.monthly_income}
+- Existing Loans: ${d.existing_loans}
+- Existing EMI: ₹${d.existing_emi}
+- Credit Card Limit: ₹${d.credit_card_limit}
+- Credit Card Balance: ₹${d.credit_card_balance}
+- Average Monthly Balance: ₹${d.average_monthly_balance}
+
+Risk Scores:
+- Credit PD Score: ${d.credit_pd_score}
+- Fraud Probability: ${d.fraud_probability}
+
+Collateral:
+- Type: ${d.collateral_type}
+- Value: ₹${d.collateral_value}
+
+Respond ONLY in valid JSON format:
+
+{
+  "recommendation": "APPROVE" | "REJECT" | "REVIEW",
+  "confidence": number,
+  "risk_level": "LOW" | "MEDIUM" | "HIGH",
+  "reasons": ["reason1", "reason2", "reason3"]
+}
+`.trim();
+
+    const groqResponse = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+
+        response_format: {
+          type: "json_object",
+        },
+
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a loan risk assessment AI. Always return valid JSON only.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+
+        temperature: 0.2,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.GROK_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const rawContent =
+      groqResponse.data.choices[0].message.content.trim();
+
+    const cleaned = rawContent
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    let parsed;
+
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      console.error("JSON PARSE ERROR:", rawContent);
+
+      return res.status(502).json({
+        error: "AI returned invalid JSON",
+      });
+    }
+
+    const {
+      recommendation,
+      confidence,
+      risk_level,
+      reasons,
+    } = parsed;
+
+    if (
+      !recommendation ||
+      confidence == null ||
+      !risk_level ||
+      !Array.isArray(reasons)
+    ) {
+      return res.status(502).json({
+        error: "AI response missing required fields",
+      });
+    }
+
+    return res.json({
+      recommendation,
+      confidence,
+      risk_level,
+      reasons,
+    });
+
+  } catch (err) {
+
+    if (err.response) {
+      console.error("GROQ API ERROR:", err.response.data);
+
+      return res.status(500).json({
+        error: err.response.data,
+      });
+    }
+
+    console.error("ANALYZE RISK ERROR:", err);
+
+    return res.status(500).json({
+      error: err.message,
     });
   }
 };
