@@ -1,7 +1,7 @@
 const db = require("../config/db");
 const generateId = require("../utils/generateId");
-const axios = require("axios");
 const s3 = require("../config/s3");
+const axios = require("axios");
 
 const uploadToS3 = async (file) => {
   const params = {
@@ -283,5 +283,211 @@ exports.getUserApplications = async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     res.status(500).json(err);
+  }
+};
+
+
+exports.getApplicationAIAnalysis = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+
+    const result = await db.query(
+      `
+      SELECT
+
+        -- APPLICATION
+        a.application_id,
+        a.loan_amount,
+        a.loan_tenure,
+        a.loan_purpose,
+        a.status,
+        a.final_decision,
+        a.reason,
+        a.risk_band,
+        a.kyc_status,
+
+        -- PROFILE
+        ap.age,
+
+        -- EMPLOYMENT
+        e.employment_type,
+        e.employer_name,
+        e.industry,
+        e.job_title,
+        e.years_in_current_job,
+        e.total_work_experience,
+        e.monthly_income,
+
+        -- FINANCIAL
+        f.existing_loans,
+        f.existing_emi,
+        f.credit_card_limit,
+        f.credit_card_balance,
+        f.average_monthly_balance,
+
+        -- DOCUMENTS
+        d.collateral_type,
+
+        -- AGENT RESULTS
+        ar.credit_pd_score,
+        ar.fraud_probability,
+        ar.employment_verified,
+        ar.collateral_value
+
+      FROM applications a
+
+      LEFT JOIN applicant_profiles ap
+        ON ap.application_id = a.application_id
+
+      LEFT JOIN employment_details e
+        ON e.application_id = a.application_id
+
+      LEFT JOIN financial_details f
+        ON f.application_id = a.application_id
+
+      LEFT JOIN documents d
+        ON d.application_id = a.application_id
+
+      LEFT JOIN LATERAL (
+        SELECT *
+        FROM agent_results
+        WHERE application_id = a.application_id
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) ar ON true
+
+      WHERE a.application_id = $1
+      `,
+      [id]
+    );
+
+    if (!result.rows.length) {
+
+      return res.status(404).json({
+        message: "Application not found"
+      });
+    }
+
+    const d = result.rows[0];
+
+
+
+    const prompt = `
+You are an AI loan advisor helping an applicant understand their loan application result.
+
+Analyze the following loan application and explain clearly in simple language.
+
+Loan Details:
+- Loan Amount: ₹${d.loan_amount}
+- Loan Tenure: ${d.loan_tenure} months
+- Purpose: ${d.loan_purpose}
+
+Applicant:
+- Age: ${d.age}
+- Employment Type: ${d.employment_type}
+- Employer: ${d.employer_name}
+- Industry: ${d.industry}
+- Job Title: ${d.job_title}
+- Years in Current Job: ${d.years_in_current_job}
+- Total Experience: ${d.total_work_experience}
+- Monthly Income: ₹${d.monthly_income}
+
+Financial Details:
+- Existing Loans: ${d.existing_loans}
+- Existing EMI: ₹${d.existing_emi}
+- Credit Card Limit: ₹${d.credit_card_limit}
+- Credit Card Balance: ₹${d.credit_card_balance}
+- Average Monthly Balance: ₹${d.average_monthly_balance}
+
+AI Risk Scores:
+- Credit PD Score: ${d.credit_pd_score}
+- Fraud Probability: ${d.fraud_probability}
+
+Collateral:
+- Type: ${d.collateral_type}
+- Value: ₹${d.collateral_value}
+
+Final Decision:
+- ${d.final_decision}
+
+Explain:
+1. Why this decision happened
+2. Main strengths
+3. Main risks
+4. What user can improve
+
+Return ONLY JSON:
+
+{
+  "summary": "",
+  "strengths": [],
+  "risks": [],
+  "improvements": []
+}
+`.trim();
+
+
+    const groqResponse = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+
+        response_format: {
+          type: "json_object"
+        },
+
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a loan analysis AI. Always return valid JSON only."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+
+        temperature: 0.3
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.GROK_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+
+    const raw =
+      groqResponse.data.choices[0].message.content.trim();
+
+    const cleaned = raw
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    const parsed = JSON.parse(cleaned);
+
+
+
+
+    return res.json({
+      application_id: d.application_id,
+      final_decision: d.final_decision,
+      risk_band: d.risk_band,
+      ai_analysis: parsed
+    });
+
+  } catch (err) {
+
+    console.error("AI ANALYSIS ERROR:", err);
+
+    return res.status(500).json({
+      error: err.message
+    });
   }
 };

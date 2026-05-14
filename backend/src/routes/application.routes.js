@@ -37,4 +37,9 @@ router.get("/status/:id", authMiddleware, controller.trackApplication);
 // Get all user applications
 router.get("/all", authMiddleware, controller.getUserApplications);
 
+router.get(
+  "/:id/ai-analysis",authMiddleware,
+  controller.getApplicationAIAnalysis
+);
+
 module.exports = router;
