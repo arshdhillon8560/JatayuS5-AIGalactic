@@ -4,6 +4,7 @@ An intelligent, production-ready loan approval platform that combines **AI Agent
 
 **Status:** ✅ Production Ready | **Version:** 1.0.0
 Deployed User Dashboard : https://blue-island-02963e500.7.azurestaticapps.net
+
 Deployed Officer Dashboard : https://red-mud-0fdf47000.7.azurestaticapps.net
 
 ---
