@@ -3,6 +3,7 @@
 An intelligent, production-ready loan approval platform that combines **AI Agents**, **Machine Learning**, and **Document Intelligence** to automate 80%+ of loan approvals while maintaining human oversight for complex cases. The system processes loan applications through a sophisticated multi-agent pipeline that evaluates loan eligibility through document analysis, credit scoring, fraud detection, and employment verification.
 
 **Status:** ✅ Production Ready | **Version:** 1.0.0
+
 Deployed User Dashboard : https://blue-island-02963e500.7.azurestaticapps.net
 
 Deployed Officer Dashboard : https://red-mud-0fdf47000.7.azurestaticapps.net
