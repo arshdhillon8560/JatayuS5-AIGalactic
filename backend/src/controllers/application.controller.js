@@ -374,51 +374,150 @@ exports.getApplicationAIAnalysis = async (req, res) => {
 
 
 
+    // -----------------------------------------
+    // DYNAMIC AVAILABLE DATA
+    // -----------------------------------------
+
+    const availableData = [];
+
+    if (d.loan_amount)
+      availableData.push(`Loan Amount: ₹${d.loan_amount}`);
+
+    if (d.loan_tenure)
+      availableData.push(`Loan Tenure: ${d.loan_tenure} months`);
+
+    if (d.loan_purpose)
+      availableData.push(`Loan Purpose: ${d.loan_purpose}`);
+
+    if (d.age)
+      availableData.push(`Applicant Age: ${d.age}`);
+
+    if (d.employment_type)
+      availableData.push(`Employment Type: ${d.employment_type}`);
+
+    if (d.employer_name)
+      availableData.push(`Employer: ${d.employer_name}`);
+
+    if (d.industry)
+      availableData.push(`Industry: ${d.industry}`);
+
+    if (d.job_title)
+      availableData.push(`Job Title: ${d.job_title}`);
+
+    if (d.years_in_current_job)
+      availableData.push(
+        `Years In Current Job: ${d.years_in_current_job}`
+      );
+
+    if (d.total_work_experience)
+      availableData.push(
+        `Total Experience: ${d.total_work_experience}`
+      );
+
+    if (d.monthly_income)
+      availableData.push(
+        `Monthly Income: ₹${d.monthly_income}`
+      );
+
+    if (d.existing_loans != null)
+      availableData.push(
+        `Existing Loans: ${d.existing_loans}`
+      );
+
+    if (d.existing_emi)
+      availableData.push(
+        `Existing EMI: ₹${d.existing_emi}`
+      );
+
+    if (d.credit_card_limit)
+      availableData.push(
+        `Credit Card Limit: ₹${d.credit_card_limit}`
+      );
+
+    if (d.credit_card_balance)
+      availableData.push(
+        `Credit Card Balance: ₹${d.credit_card_balance}`
+      );
+
+    if (d.average_monthly_balance)
+      availableData.push(
+        `Average Monthly Balance: ₹${d.average_monthly_balance}`
+      );
+
+    if (d.collateral_type)
+      availableData.push(
+        `Collateral Type: ${d.collateral_type}`
+      );
+
+    if (d.collateral_value)
+      availableData.push(
+        `Collateral Value: ₹${d.collateral_value}`
+      );
+
+    if (d.credit_pd_score != null)
+      availableData.push(
+        `Credit PD Score: ${d.credit_pd_score}`
+      );
+
+    if (d.fraud_probability != null)
+      availableData.push(
+        `Fraud Probability: ${d.fraud_probability}`
+      );
+
+    if (d.employment_verified != null)
+      availableData.push(
+        `Employment Verified: ${d.employment_verified}`
+      );
+
+
+
+    // -----------------------------------------
+    // SMART PROMPT
+    // -----------------------------------------
+
     const prompt = `
-You are an AI loan advisor helping an applicant understand their loan application result.
+You are an AI loan advisor helping applicants understand their loan application result.
 
-Analyze the following loan application and explain clearly in simple language.
+Application Status:
+- Status: ${d.status}
+- Final Decision: ${d.final_decision}
+- KYC Status: ${d.kyc_status}
+- System Reason: ${d.reason || "Not Available"}
+- Risk Band: ${d.risk_band || "Not Available"}
 
-Loan Details:
-- Loan Amount: ₹${d.loan_amount}
-- Loan Tenure: ${d.loan_tenure} months
-- Purpose: ${d.loan_purpose}
+Available Application Data:
+${availableData.join("\n")}
 
-Applicant:
-- Age: ${d.age}
-- Employment Type: ${d.employment_type}
-- Employer: ${d.employer_name}
-- Industry: ${d.industry}
-- Job Title: ${d.job_title}
-- Years in Current Job: ${d.years_in_current_job}
-- Total Experience: ${d.total_work_experience}
-- Monthly Income: ₹${d.monthly_income}
+Instructions:
 
-Financial Details:
-- Existing Loans: ${d.existing_loans}
-- Existing EMI: ₹${d.existing_emi}
-- Credit Card Limit: ₹${d.credit_card_limit}
-- Credit Card Balance: ₹${d.credit_card_balance}
-- Average Monthly Balance: ₹${d.average_monthly_balance}
+1. Explain the decision primarily based on:
+   - application status
+   - rejection/escalation reason
+   - KYC result
+   - document verification result
+   - financial analysis
+   - ML scores
+   - employment verification
+   whichever information is available.
 
-AI Risk Scores:
-- Credit PD Score: ${d.credit_pd_score}
-- Fraud Probability: ${d.fraud_probability}
+2. If ML scores are NOT available:
+   - DO NOT mention PD score or fraud score.
+   - Focus on KYC/document/verification reasons.
 
-Collateral:
-- Type: ${d.collateral_type}
-- Value: ₹${d.collateral_value}
+3. If KYC failed:
+   - Explain KYC-related rejection only.
 
-Final Decision:
-- ${d.final_decision}
+4. If document mismatch or consistency issues occurred:
+   - Explain document mismatch clearly.
 
-Explain:
-1. Why this decision happened
-2. Main strengths
-3. Main risks
-4. What user can improve
+5. If ML scores are available:
+   - Explain financial risk analysis using those scores.
 
-Return ONLY JSON:
+6. Never hallucinate unavailable information.
+
+7. Keep explanation simple and user-friendly.
+
+Return ONLY valid JSON:
 
 {
   "summary": "",
@@ -427,6 +526,7 @@ Return ONLY JSON:
   "improvements": []
 }
 `.trim();
+
 
 
     const groqResponse = await axios.post(
@@ -442,7 +542,7 @@ Return ONLY JSON:
           {
             role: "system",
             content:
-              "You are a loan analysis AI. Always return valid JSON only."
+              "You are a professional loan analysis AI. Always return valid JSON only."
           },
           {
             role: "user",
@@ -450,7 +550,7 @@ Return ONLY JSON:
           }
         ],
 
-        temperature: 0.3
+        temperature: 0.2
       },
       {
         headers: {
@@ -474,11 +574,13 @@ Return ONLY JSON:
 
 
 
-
     return res.json({
       application_id: d.application_id,
+      status: d.status,
       final_decision: d.final_decision,
+      reason: d.reason,
       risk_band: d.risk_band,
+      kyc_status: d.kyc_status,
       ai_analysis: parsed
     });
 
