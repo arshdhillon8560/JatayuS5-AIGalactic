@@ -35,7 +35,7 @@ exports.createApplication = async (req, res) => {
     await db.query(
       `INSERT INTO applications
       (application_id,user_id,loan_amount,loan_tenure,loan_purpose,status)
-      VALUES($1,$2,$3,$4,$5,'CREATED')`,
+      VALUES($1,$2,$3,$4,$5,'PENDING')`,
       [application_id, req.user.id, loan_amount, loan_tenure, loan_purpose]
     );
 
