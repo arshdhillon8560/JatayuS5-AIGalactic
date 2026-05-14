@@ -199,10 +199,9 @@ exports.uploadDocuments = async (req, res) => {
 };
 
 
-
-
 exports.trackApplication = async (req, res) => {
   try {
+
     const { id } = req.params;
 
     const result = await db.query(
@@ -216,6 +215,7 @@ exports.trackApplication = async (req, res) => {
 
         ar.credit_pd_score,
         ar.fraud_probability,
+        ar.employment_verified,
         ar.collateral_value,
         ar.collateral_risk,
         ar.final_decision
@@ -236,22 +236,35 @@ exports.trackApplication = async (req, res) => {
     );
 
     if (!result.rows.length) {
-      return res.status(404).json({ message: "Not found" });
+      return res.status(404).json({
+        message: "Not found"
+      });
     }
 
     const app = result.rows[0];
 
     res.json({
       ...app,
+
       agent_scores: {
         pd: app.credit_pd_score,
         fraud: app.fraud_probability,
-        collateral_value: app.collateral_value,
-        collateral_risk: app.collateral_risk,
+
+        employment_verified:
+          app.employment_verified,
+
+        collateral_value:
+          app.collateral_value,
+
+        collateral_risk:
+          app.collateral_risk,
       },
     });
+
   } catch (err) {
+
     console.error("TRACK ERROR:", err);
+
     res.status(500).json(err);
   }
 };

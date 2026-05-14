@@ -4,7 +4,7 @@ const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL;
 
 const api = axios.create({
   baseURL: ORCHESTRATOR_URL,
-  timeout: 60000,
+  timeout: 120000,
 });
 
 exports.sendToOrchestrator = async (application_id) => {
