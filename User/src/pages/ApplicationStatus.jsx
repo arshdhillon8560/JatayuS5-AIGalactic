@@ -311,8 +311,21 @@ export default function ApplicationStatus() {
               Risk Band
             </p>
 
-            <p className="font-bold text-slate-700">
-              {status.risk_band || "N/A"}
+            <p
+              className={`text-xl font-bold ${
+                status.risk_band?.toUpperCase() === "LOW"
+                  ? "text-green-600"
+                  : status.risk_band?.toUpperCase() === "MEDIUM"
+                    ? "text-amber-500"
+                    : status.risk_band?.toUpperCase() === "HIGH"
+                      ? "text-red-600"
+                      : "text-slate-500"
+              }`}
+              style={{
+                fontFamily: "Playfair Display, serif",
+              }}
+            >
+              {status.risk_band || "Not Available"}
             </p>
           </div>
         </div>
@@ -323,7 +336,10 @@ export default function ApplicationStatus() {
           {/* COMPLETE KYC BUTTON */}
 
           {status.kyc_status === "PENDING" && (
-            <button onClick={() =>navigate(`/kyc/${id}`)} className="btn-primary">
+            <button
+              onClick={() => navigate(`/kyc/${id}`)}
+              className="btn-primary"
+            >
               <Shield size={16} />
               Complete KYC
             </button>

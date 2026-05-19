@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 import logging
 from dotenv import load_dotenv
-load_dotenv()
 
+load_dotenv()
 
 from services.application_service import get_application_data
 from services.database_service import update_application_status
@@ -18,14 +18,15 @@ from agents.employment_agent import verify_employment
 
 app = FastAPI()
 
+
 @app.get("/")
 def home():
     return {"message": "Orchestrator running 🚀"}
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
 
 
 def merge_docs(docs):
@@ -42,110 +43,214 @@ def merge_docs(docs):
 
         "aadhaar": safe_get(docs.get("collateral_url"), "aadhaar"),
 
-        "account_number": safe_get(docs.get("bank_statement_url"), "account_number"),
+        "account_number": safe_get(
+            docs.get("bank_statement_url"),
+            "account_number"
+        ),
 
-        "monthly_income": safe_get(docs.get("salary_slip_url"), "monthly_income"),
+        "monthly_income": safe_get(
+            docs.get("salary_slip_url"),
+            "monthly_income"
+        ),
 
-        "property_value": safe_get(docs.get("collateral_url"), "property_value"),
+        "property_value": safe_get(
+            docs.get("collateral_url"),
+            "property_value"
+        ),
 
         "bank_balance_history": safe_get(
-            docs.get("bank_statement_url"), "bank_balance_history"
+            docs.get("bank_statement_url"),
+            "bank_balance_history"
         ) or []
     }
-
 
 
 @app.post("/process-application")
 def process(data: dict):
 
     try:
+
         app_id = data.get("application_id")
 
         if not app_id:
-            raise HTTPException(status_code=400, detail="application_id required")
+            raise HTTPException(
+                status_code=400,
+                detail="application_id required"
+            )
 
-       
+        # =========================
+        # FETCH DATABASE DATA
+        # =========================
+
         db = get_application_data(app_id)
 
         if not db:
-            raise HTTPException(status_code=404, detail="Application not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Application not found"
+            )
 
         parsed_docs = {}
 
-        
+        # =========================
+        # OCR + PARSING
+        # =========================
+
         for key, url in db.get("documents", {}).items():
+
             if not url:
                 continue
 
             try:
+
+                print(f"\n📄 Processing document: {key}")
+
                 text = extract_text_s3(url)
+
                 parsed_docs[key] = parse_document(text)
+
             except Exception as e:
-                logging.error(f"OCR/PARSE failed for {key}: {str(e)}")
+
+                logging.error(
+                    f"OCR/PARSE failed for {key}: {str(e)}"
+                )
 
         logging.info(f"PARSED DOCS: {parsed_docs}")
 
-        
+        # =========================
+        # MERGE DOC DATA
+        # =========================
+
         merged = merge_docs(parsed_docs)
 
         logging.info(f"MERGED DATA: {merged}")
 
-        
+        # =========================
+        # DOCUMENT CONSISTENCY
+        # =========================
+
         valid, consistency_score = check_all_documents(
-            db.get("profile", {}), merged
+            db.get("profile", {}),
+            merged
         )
+
+        print("\n📊 Consistency Score:", consistency_score)
 
         if not valid:
+
             update_application_status(
-                app_id, "REJECTED", f"Low consistency: {consistency_score}"
+                app_id,
+                "REJECTED",
+                f"Low document consistency: {consistency_score}",
+                "HIGH"
             )
+
             return {
                 "decision": "REJECTED",
-                "reason": "Low document consistency"
+                "reason": "Low document consistency",
+                "consistency_score": consistency_score
             }
 
-       
-        emp_verified = verify_employment(db.get("employment", {}))
+        # =========================
+        # EMPLOYMENT VERIFICATION
+        # =========================
 
-        
-        ml_input = build_ml_input(
-            db, merged, consistency_score, emp_verified
+        emp_verified = verify_employment(
+            db.get("employment", {})
         )
 
-        
-        credit, fraud = get_scores(ml_input)
+        print("💼 Employment Verified:", emp_verified)
 
-       
-        decision, reason = make_decision(
-            credit.get("pd_score", 0),
-            fraud.get("fraud_probability", 0),
+        # =========================
+        # FEATURE ENGINEERING
+        # =========================
+
+        ml_input = build_ml_input(
+            db,
+            merged,
+            consistency_score,
             emp_verified
         )
 
-        
-        update_application_status(app_id, decision, reason)
+        # =========================
+        # ML API CALLS
+        # =========================
+
+        credit, fraud = get_scores(ml_input)
+
+        print("\n📥 CREDIT:", credit)
+        print("📥 FRAUD:", fraud)
+
+        pd_score = credit.get("pd_score", 0)
+
+        risk_band = credit.get("risk_band", "UNKNOWN")
+
+        fraud_probability = fraud.get(
+            "fraud_probability",
+            0
+        )
+
+        # =========================
+        # FINAL DECISION
+        # =========================
+
+        decision, reason = make_decision(
+            pd_score,
+            fraud_probability,
+            emp_verified
+        )
+
+        print("\n✅ FINAL DECISION:", decision)
+        print("📝 REASON:", reason)
+
+        # =========================
+        # UPDATE APPLICATION
+        # =========================
+
+        update_application_status(
+            app_id,
+            decision,
+            reason,
+            risk_band
+        )
+
+        # =========================
+        # SAVE AGENT RESULT
+        # =========================
 
         save_agent_result(
             app_id,
-            credit.get("pd_score", 0),
-            fraud.get("fraud_probability", 0),
+            pd_score,
+            fraud_probability,
             emp_verified,
             merged.get("property_value"),
             decision,
             reason
         )
 
+        # =========================
+        # FINAL RESPONSE
+        # =========================
+
         return {
+            "application_id": app_id,
             "decision": decision,
             "reason": reason,
-            "pd_score": credit.get("pd_score"),
-            "fraud": fraud.get("fraud_probability"),
-            "consistency_score": consistency_score
+            "risk_band": risk_band,
+            "pd_score": pd_score,
+            "fraud_probability": fraud_probability,
+            "consistency_score": consistency_score,
+            "employment_verified": emp_verified
         }
 
     except HTTPException as e:
         raise e
 
     except Exception as e:
+
         logging.error(f"PROCESS FAILED: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
