@@ -604,6 +604,8 @@ export const ApplicationDetails = () => {
   const { logout } = useAuth();
   const [data, setData] = useState(null);
   const [reason, setReason] = useState("");
+  const [selectedDecision, setSelectedDecision] = useState("");
+  const [customReason, setCustomReason] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(null);
 
@@ -619,9 +621,13 @@ export const ApplicationDetails = () => {
     });
   }, [id]);
 
-  const handleDecision = async (decision) => {
+  const handleDecision = async (decision, decisionReason) => {
     setSubmitting(decision);
-    await officerAPI.updateDecision({ application_id: id, decision, reason });
+    await officerAPI.updateDecision({
+      application_id: id,
+      decision,
+      reason: decisionReason,
+    });
     setSubmitting(null);
     alert("Application " + decision);
     navigate("/dashboard");
@@ -1152,76 +1158,362 @@ export const ApplicationDetails = () => {
         </Section>
 
         {/* ── DECISION ──────────────────────────────────────────────── */}
+        {/* ── DECISION ──────────────────────────────────────────────── */}
+        {/* ── DECISION ──────────────────────────────────────────────── */}
         <Section
           icon={ClipboardCheck}
           title="Officer Decision"
           accent="#1D4ED8"
         >
-          <p
-            style={{ color: tokens.muted, fontFamily: "'DM Sans', sans-serif" }}
-            className="text-xs mb-3"
-          >
-            Reason is optional for approval, required for rejection.
-          </p>
-          <textarea
-            rows={3}
-            placeholder="Enter your rationale for this decision…"
-            onChange={(e) => setReason(e.target.value)}
-            className="w-full resize-none outline-none text-sm mb-5 px-4 py-3 rounded-xl transition-all"
+          {/* DECISION LABEL */}
+          <label
+            className="block text-[11px] font-semibold mb-2 uppercase tracking-[0.12em]"
             style={{
+              color: tokens.muted,
               fontFamily: "'DM Sans', sans-serif",
-              color: tokens.text,
-              background: tokens.surface,
-              border: `1px solid ${tokens.border}`,
             }}
-            onFocus={(e) => {
-              e.target.style.borderColor = "#1D4ED8";
-              e.target.style.boxShadow = "0 0 0 3px rgba(29,78,216,0.1)";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = tokens.border;
-              e.target.style.boxShadow = "none";
-            }}
-          />
-          <div className="flex gap-3">
+          >
+            Officer Decision
+          </label>
+
+          {/* MODERN CUSTOM DECISION SELECT */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            {/* APPROVE CARD */}
             <motion.button
               whileHover={{
-                y: -1,
-                boxShadow: "0 6px 16px rgba(11,31,58,0.22)",
+                y: -2,
+                boxShadow: "0 10px 24px rgba(34,197,94,0.16)",
               }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => handleDecision("APPROVED")}
-              disabled={!!submitting}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setSelectedDecision("APPROVED");
+                setReason("");
+              }}
+              className="relative overflow-hidden rounded-2xl p-4 text-left transition-all"
               style={{
-                fontFamily: "'Syne', sans-serif",
-                background: submitting ? "#6B7280" : tokens.navy,
-                color: "#fff",
-                border: "none",
-                cursor: submitting ? "not-allowed" : "pointer",
+                background:
+                  selectedDecision === "APPROVED"
+                    ? "linear-gradient(135deg, #ECFDF3 0%, #D1FAE5 100%)"
+                    : "#FFFFFF",
+                border:
+                  selectedDecision === "APPROVED"
+                    ? "2px solid #22C55E"
+                    : `1.5px solid ${tokens.border}`,
+                cursor: "pointer",
               }}
             >
-              <CheckCircle className="w-4 h-4" />
-              {submitting === "APPROVED" ? "Approving…" : "Approve"}
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background:
+                      selectedDecision === "APPROVED" ? "#22C55E" : "#F0FDF4",
+                  }}
+                >
+                  <CheckCircle
+                    className="w-5 h-5"
+                    style={{
+                      color:
+                        selectedDecision === "APPROVED" ? "#FFFFFF" : "#16A34A",
+                    }}
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{
+                      color: "#14532D",
+                      fontFamily: "'Syne', sans-serif",
+                    }}
+                  >
+                    Approve Application
+                  </h3>
+
+                  <p
+                    className="text-xs mt-1 leading-relaxed"
+                    style={{
+                      color: "#166534",
+                      opacity: 0.75,
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    Applicant satisfies underwriting, risk and verification
+                    checks.
+                  </p>
+                </div>
+              </div>
+
+              {selectedDecision === "APPROVED" && (
+                <div
+                  className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full"
+                  style={{ background: "#22C55E" }}
+                />
+              )}
             </motion.button>
+
+            {/* REJECT CARD */}
             <motion.button
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => handleDecision("REJECTED")}
-              disabled={!!submitting}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              whileHover={{
+                y: -2,
+                boxShadow: "0 10px 24px rgba(220,38,38,0.14)",
+              }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setSelectedDecision("REJECTED");
+                setReason("");
+              }}
+              className="relative overflow-hidden rounded-2xl p-4 text-left transition-all"
               style={{
-                fontFamily: "'Syne', sans-serif",
-                background: "#FEF2F2",
-                color: "#991B1B",
-                border: "1px solid #FECACA",
-                cursor: submitting ? "not-allowed" : "pointer",
+                background:
+                  selectedDecision === "REJECTED"
+                    ? "linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)"
+                    : "#FFFFFF",
+                border:
+                  selectedDecision === "REJECTED"
+                    ? "2px solid #EF4444"
+                    : `1.5px solid ${tokens.border}`,
+                cursor: "pointer",
               }}
             >
-              <XCircle className="w-4 h-4" />
-              {submitting === "REJECTED" ? "Rejecting…" : "Reject"}
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background:
+                      selectedDecision === "REJECTED" ? "#EF4444" : "#FEF2F2",
+                  }}
+                >
+                  <XCircle
+                    className="w-5 h-5"
+                    style={{
+                      color:
+                        selectedDecision === "REJECTED" ? "#FFFFFF" : "#DC2626",
+                    }}
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{
+                      color: "#991B1B",
+                      fontFamily: "'Syne', sans-serif",
+                    }}
+                  >
+                    Reject Application
+                  </h3>
+
+                  <p
+                    className="text-xs mt-1 leading-relaxed"
+                    style={{
+                      color: "#991B1B",
+                      opacity: 0.75,
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    Applicant failed risk, fraud, compliance or eligibility
+                    checks.
+                  </p>
+                </div>
+              </div>
+
+              {selectedDecision === "REJECTED" && (
+                <div
+                  className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full"
+                  style={{ background: "#EF4444" }}
+                />
+              )}
             </motion.button>
           </div>
+
+          {/* APPROVAL REASONS */}
+          {selectedDecision === "APPROVED" && (
+            <div className="mb-5">
+              <label
+                className="block text-[11px] font-semibold mb-2 uppercase tracking-[0.12em]"
+                style={{
+                  color: "#16A34A",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                Approval Reason
+              </label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  "Low credit risk",
+                  "Strong repayment capacity",
+                  "Stable employment verified",
+                  "Excellent banking history",
+                  "Collateral value sufficient",
+                  "Documents verified successfully",
+                  "Good credit utilization",
+                  "Custom",
+                ].map((item) => (
+                  <motion.button
+                    key={item}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setReason(item)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all"
+                    style={{
+                      background: reason === item ? "#ECFDF3" : "#FFFFFF",
+                      border:
+                        reason === item
+                          ? "2px solid #22C55E"
+                          : `1.5px solid ${tokens.border}`,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{
+                        background: reason === item ? "#22C55E" : "#D1D5DB",
+                      }}
+                    />
+
+                    <span
+                      className="text-sm font-medium"
+                      style={{
+                        color: reason === item ? "#14532D" : tokens.text,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      {item}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* REJECTION REASONS */}
+          {selectedDecision === "REJECTED" && (
+            <div className="mb-5">
+              <label
+                className="block text-[11px] font-semibold mb-2 uppercase tracking-[0.12em]"
+                style={{
+                  color: "#DC2626",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                Rejection Reason
+              </label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  "High credit risk",
+                  "High fraud probability",
+                  "Low income eligibility",
+                  "Poor repayment history",
+                  "Employment not verified",
+                  "Document mismatch detected",
+                  "Insufficient collateral value",
+                  "KYC verification failed",
+                  "Too many existing loans",
+                  "Custom",
+                ].map((item) => (
+                  <motion.button
+                    key={item}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setReason(item)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all"
+                    style={{
+                      background: reason === item ? "#FEF2F2" : "#FFFFFF",
+                      border:
+                        reason === item
+                          ? "2px solid #EF4444"
+                          : `1.5px solid ${tokens.border}`,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{
+                        background: reason === item ? "#EF4444" : "#D1D5DB",
+                      }}
+                    />
+
+                    <span
+                      className="text-sm font-medium"
+                      style={{
+                        color: reason === item ? "#991B1B" : tokens.text,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      {item}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CUSTOM REASON */}
+          {reason === "Custom" && (
+            <textarea
+              rows={4}
+              placeholder="Enter custom officer remarks..."
+              onChange={(e) => setCustomReason(e.target.value)}
+              className="w-full resize-none outline-none text-sm mb-5 px-4 py-4 rounded-2xl transition-all"
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                color: tokens.text,
+                background: "#FFFFFF",
+                border: `1.5px solid ${tokens.border}`,
+              }}
+            />
+          )}
+
+          {/* FINAL ACTION BUTTON */}
+          <motion.button
+            whileHover={{
+              y: -2,
+              boxShadow:
+                selectedDecision === "APPROVED"
+                  ? "0 12px 28px rgba(34,197,94,0.24)"
+                  : "0 12px 28px rgba(220,38,38,0.22)",
+            }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() =>
+              handleDecision(
+                selectedDecision,
+                reason === "Custom" ? customReason : reason,
+              )
+            }
+            disabled={!selectedDecision || !reason || !!submitting}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-semibold transition-all"
+            style={{
+              fontFamily: "'Syne', sans-serif",
+              background:
+                selectedDecision === "APPROVED"
+                  ? "linear-gradient(135deg, #15803D 0%, #22C55E 100%)"
+                  : selectedDecision === "REJECTED"
+                    ? "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)"
+                    : "#CBD5E1",
+              color: "#FFFFFF",
+              cursor: !selectedDecision || !reason ? "not-allowed" : "pointer",
+              opacity: !selectedDecision || !reason ? 0.7 : 1,
+            }}
+          >
+            {selectedDecision === "APPROVED" ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                {submitting === "APPROVED"
+                  ? "Approving Application..."
+                  : "Approve Application"}
+              </>
+            ) : (
+              <>
+                <XCircle className="w-4 h-4" />
+                {submitting === "REJECTED"
+                  ? "Rejecting Application..."
+                  : "Reject Application"}
+              </>
+            )}
+          </motion.button>
         </Section>
 
         {/* FOOTER */}
