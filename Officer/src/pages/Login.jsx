@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { authAPI } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { authAPI } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import favicon from "../assets/favicon.png";
-
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
@@ -385,13 +384,13 @@ export const Login = () => {
   const { login } = useAuth();
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ email: "", password: "" });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -400,13 +399,13 @@ export const Login = () => {
     try {
       const res = await authAPI.login(formData);
       if (!res.token) {
-        setError(res.message || 'Login failed');
+        setError(res.message || "Login failed");
         return;
       }
       login(res.token);
-      navigate('/dashboard');
+      navigate("/dashboard");
     } catch (err) {
-      setError('Login error');
+      setError("Login error");
     } finally {
       setLoading(false);
     }
@@ -416,20 +415,27 @@ export const Login = () => {
     <>
       <style>{styles}</style>
       <div className="liq-root">
-
         {/* NAVBAR */}
         <nav className="liq-navbar">
           <div className="liq-nav-brand">
             <div className="liq-nav-logo-mark">
               <img src={favicon} alt="Logo" width="20" height="20" />
             </div>
-            <span className="liq-nav-brand-text">Virtusa <span>Smart Loan </span></span>
+            <span className="liq-nav-brand-text">
+              Virtusa <span>Smart Loan </span>
+            </span>
           </div>
 
           <div className="liq-nav-links">
-            <a className="liq-nav-link" href="#">Platform</a>
-            <a className="liq-nav-link" href="#">Documentation</a>
-            <a className="liq-nav-link" href="#">Support</a>
+            <a className="liq-nav-link" href="#">
+              Platform
+            </a>
+            <a className="liq-nav-link" href="#">
+              Documentation
+            </a>
+            <a className="liq-nav-link" href="#">
+              Support
+            </a>
           </div>
 
           <span className="liq-nav-badge">Officer Portal</span>
@@ -437,22 +443,25 @@ export const Login = () => {
 
         {/* MAIN BODY */}
         <div className="liq-main-body">
-
           <div className="liq-left-panel">
             <p className="liq-left-eyebrow">AI-Powered Credit Intelligence</p>
             <h1 className="liq-left-headline">
-              Smarter loan decisions,<br /><span>at banking scale.</span>
+              Smarter loan decisions,
+              <br />
+              <span>at banking scale.</span>
             </h1>
             <p className="liq-left-sub">
-              Combines real-time financial data, machine learning models, and regulatory compliance checks to accelerate credit assessment from days to minutes.
+              Combines real-time financial data, machine learning models, and
+              regulatory compliance checks to accelerate credit assessment from
+              days to minutes.
             </p>
 
             <ul className="liq-feature-list">
               {[
-                'Automated risk scoring with explainable AI outputs',
-                'Fraud signal detection across 40+ behavioral indicators',
-                'Full audit trail for compliance and model governance',
-                'Real-time bureau integration and income verification',
+                "Automated risk scoring with explainable AI outputs",
+                "Fraud signal detection across 40+ behavioral indicators",
+                "Full audit trail for compliance and model governance",
+                "Real-time bureau integration and income verification",
               ].map((f, i) => (
                 <li key={i} className="liq-feature-item">
                   <span className="liq-feature-dot" />
@@ -463,9 +472,9 @@ export const Login = () => {
 
             <div className="liq-stat-row">
               {[
-                { num: '94.2%', label: 'Model accuracy' },
-                { num: '8 min', label: 'Avg. decision time' },
-                { num: '₹2.4B', label: 'Credit assessed' },
+                { num: "94.2%", label: "Model accuracy" },
+                { num: "8 min", label: "Avg. decision time" },
+                { num: "₹2.4B", label: "Credit assessed" },
               ].map((s, i) => (
                 <div key={i} className="liq-stat-item">
                   <span className="liq-stat-num">{s.num}</span>
@@ -478,22 +487,43 @@ export const Login = () => {
           {/* RIGHT PANEL */}
           <div className="liq-right-panel">
             <div className="liq-login-card">
-
               <div className="liq-card-header">
                 <div className="liq-card-icon">
-                  <svg viewBox="0 0 20 20" fill="none" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M10 2a4 4 0 100 8 4 4 0 000-8zm-6 9a1 1 0 011-1h10a1 1 0 011 1v1a5 5 0 01-10 0v-1z" fill="#2B7FD4"/>
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    width="20"
+                    height="20"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M10 2a4 4 0 100 8 4 4 0 000-8zm-6 9a1 1 0 011-1h10a1 1 0 011 1v1a5 5 0 01-10 0v-1z"
+                      fill="#2B7FD4"
+                    />
                   </svg>
                 </div>
                 <h2 className="liq-card-title">Sign in to your account</h2>
-                <p className="liq-card-subtitle">Access restricted to authorized officers only</p>
+                <p className="liq-card-subtitle">
+                  Access restricted to authorized officers only
+                </p>
               </div>
 
               {error && (
                 <div className="liq-error-box">
                   <svg viewBox="0 0 14 14" fill="none" width="14" height="14">
-                    <circle cx="7" cy="7" r="6" stroke="#B91C1C" strokeWidth="1.2"/>
-                    <path d="M7 4v3M7 9.5v.5" stroke="#B91C1C" strokeWidth="1.3" strokeLinecap="round"/>
+                    <circle
+                      cx="7"
+                      cy="7"
+                      r="6"
+                      stroke="#B91C1C"
+                      strokeWidth="1.2"
+                    />
+                    <path
+                      d="M7 4v3M7 9.5v.5"
+                      stroke="#B91C1C"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                    />
                   </svg>
                   {error}
                 </div>
@@ -504,8 +534,16 @@ export const Login = () => {
                   <label className="liq-form-label">Work email address</label>
                   <div className="liq-input-wrap">
                     <span className="liq-input-icon">
-                      <svg viewBox="0 0 15 15" fill="none" width="15" height="15">
-                        <path d="M1 3.5A1.5 1.5 0 012.5 2h10A1.5 1.5 0 0114 3.5v8A1.5 1.5 0 0112.5 13h-10A1.5 1.5 0 011 11.5v-8zM2.5 3a.5.5 0 00-.5.5v.573l5.5 3.143 5.5-3.143V3.5a.5.5 0 00-.5-.5h-10zM13 5.43L7.5 8.57 2 5.43V11.5a.5.5 0 00.5.5h10a.5.5 0 00.5-.5V5.43z" fill="currentColor"/>
+                      <svg
+                        viewBox="0 0 15 15"
+                        fill="none"
+                        width="15"
+                        height="15"
+                      >
+                        <path
+                          d="M1 3.5A1.5 1.5 0 012.5 2h10A1.5 1.5 0 0114 3.5v8A1.5 1.5 0 0112.5 13h-10A1.5 1.5 0 011 11.5v-8zM2.5 3a.5.5 0 00-.5.5v.573l5.5 3.143 5.5-3.143V3.5a.5.5 0 00-.5-.5h-10zM13 5.43L7.5 8.57 2 5.43V11.5a.5.5 0 00.5.5h10a.5.5 0 00.5-.5V5.43z"
+                          fill="currentColor"
+                        />
                       </svg>
                     </span>
                     <input
@@ -524,8 +562,16 @@ export const Login = () => {
                   <label className="liq-form-label">Password</label>
                   <div className="liq-input-wrap">
                     <span className="liq-input-icon">
-                      <svg viewBox="0 0 15 15" fill="none" width="15" height="15">
-                        <path d="M5 6V4.5a2.5 2.5 0 015 0V6H11a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1h1zm1 0h3V4.5a1.5 1.5 0 00-3 0V6zm1.5 2.5a1 1 0 10.001 2.001A1 1 0 007.5 8.5z" fill="currentColor"/>
+                      <svg
+                        viewBox="0 0 15 15"
+                        fill="none"
+                        width="15"
+                        height="15"
+                      >
+                        <path
+                          d="M5 6V4.5a2.5 2.5 0 015 0V6H11a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1h1zm1 0h3V4.5a1.5 1.5 0 00-3 0V6zm1.5 2.5a1 1 0 10.001 2.001A1 1 0 007.5 8.5z"
+                          fill="currentColor"
+                        />
                       </svg>
                     </span>
                     <input
@@ -549,14 +595,26 @@ export const Login = () => {
                     />
                     Keep me signed in
                   </label>
-                  <button type="button" className="liq-forgot-link">Forgot password?</button>
+                  <button type="button" className="liq-forgot-link">
+                    Forgot password?
+                  </button>
                 </div>
 
-                <button type="submit" className="liq-submit-btn" disabled={loading}>
-                  {loading ? 'Verifying credentials…' : 'Sign in'}
+                <button
+                  type="submit"
+                  className="liq-submit-btn"
+                  disabled={loading}
+                >
+                  {loading ? "Verifying credentials…" : "Sign in"}
                   {!loading && (
                     <svg viewBox="0 0 14 14" fill="none" width="14" height="14">
-                      <path d="M1 7h12M8 3l5 4-5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path
+                        d="M1 7h12M8 3l5 4-5 4"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   )}
                 </button>
@@ -565,17 +623,26 @@ export const Login = () => {
               <div className="liq-card-footer">
                 <span className="liq-security-badge">
                   <svg viewBox="0 0 13 13" fill="none" width="13" height="13">
-                    <path d="M6.5 1L2 2.8v3.7C2 9.3 3.9 11.7 6.5 12.5 9.1 11.7 11 9.3 11 6.5V2.8L6.5 1z" stroke="#7EA862" strokeWidth="1" fill="rgba(126,168,98,0.12)"/>
-                    <path d="M4.5 6.5l1.5 1.5 2.5-2.5" stroke="#7EA862" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path
+                      d="M6.5 1L2 2.8v3.7C2 9.3 3.9 11.7 6.5 12.5 9.1 11.7 11 9.3 11 6.5V2.8L6.5 1z"
+                      stroke="#7EA862"
+                      strokeWidth="1"
+                      fill="rgba(126,168,98,0.12)"
+                    />
+                    <path
+                      d="M4.5 6.5l1.5 1.5 2.5-2.5"
+                      stroke="#7EA862"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                   TLS 1.3 encrypted
                 </span>
                 <span className="liq-restricted-note">v2.4.1 · Production</span>
               </div>
-
             </div>
           </div>
-
         </div>
       </div>
     </>

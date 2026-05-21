@@ -1,16 +1,20 @@
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, LogOut } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
-import virtusaLogo from '../assets/virtusa_logo.png'
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, LogOut } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import virtusaLogo from "../assets/virtusa_logo.png";
 
-export default function Header({ showBack = true, backLabel = 'Dashboard', backPath = '/dashboard' }) {
-  const navigate = useNavigate()
-  const { logout } = useAuth()
+export default function Header({
+  showBack = true,
+  backLabel = "Dashboard",
+  backPath = "/dashboard",
+}) {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+    logout();
+    navigate("/login");
+  };
 
   return (
     <header className="bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200 sticky top-0 z-50">
@@ -36,5 +40,5 @@ export default function Header({ showBack = true, backLabel = 'Dashboard', backP
         </button>
       </div>
     </header>
-  )
+  );
 }

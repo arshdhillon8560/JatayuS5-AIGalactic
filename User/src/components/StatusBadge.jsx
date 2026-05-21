@@ -4,77 +4,67 @@ import {
   XCircle,
   AlertCircle,
   Loader,
-  ThumbsUp
-} from 'lucide-react'
+  ThumbsUp,
+} from "lucide-react";
 
 const MAP = {
-
   APPROVED: {
-    cls: 'badge-approved',
-    Icon: ThumbsUp
+    cls: "badge-approved",
+    Icon: ThumbsUp,
   },
 
   REJECTED: {
-    cls: 'badge-rejected',
-    Icon: XCircle
+    cls: "badge-rejected",
+    Icon: XCircle,
   },
 
   ESCALATED: {
-    cls: 'badge-escalated',
-    Icon: AlertCircle
+    cls: "badge-escalated",
+    Icon: AlertCircle,
   },
 
   PROCESSING: {
-    cls: 'badge-processing',
-    Icon: Loader
+    cls: "badge-processing",
+    Icon: Loader,
   },
 
   PENDING: {
-    cls: 'badge-pending',
-    Icon: Clock
+    cls: "badge-pending",
+    Icon: Clock,
   },
 
   CREATED: {
-    cls: 'badge-created',
-    Icon: AlertCircle
+    cls: "badge-created",
+    Icon: AlertCircle,
   },
 
   VERIFIED: {
-    cls: 'badge-verified',
-    Icon: CheckCircle
+    cls: "badge-verified",
+    Icon: CheckCircle,
   },
 
   FAILED: {
-    cls: 'badge-failed',
-    Icon: XCircle
+    cls: "badge-failed",
+    Icon: XCircle,
   },
 
   PAN_VERIFIED: {
-    cls: 'badge-pan-verified',
-    Icon: CheckCircle
+    cls: "badge-pan-verified",
+    Icon: CheckCircle,
   },
-}
+};
 
 export default function StatusBadge({ status }) {
-
-  const {
-    cls,
-    Icon
-  } = MAP[status] || MAP.PENDING
+  const { cls, Icon } = MAP[status] || MAP.PENDING;
 
   return (
     <span className={`badge ${cls}`}>
-
       <Icon
         size={10}
-        className={
-          status === 'PROCESSING'
-            ? 'animate-spin'
-            : ''
-        }
+        className={status === "PROCESSING" ? "animate-spin" : ""}
       />
 
-      {status?.replace(/_/g, ' ')}
+      {status?.replace(/_/g, " ")}
     </span>
-  )
+  );
 }
