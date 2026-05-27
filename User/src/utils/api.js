@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'https://jatayu-s5-ai-galactic.vercel.app',
-  timeout: 120000,
+  timeout: 300000
 })
 
 api.interceptors.request.use(cfg => {
