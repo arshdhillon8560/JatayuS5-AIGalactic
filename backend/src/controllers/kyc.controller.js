@@ -119,7 +119,7 @@ exports.verifyPANController =
       await db.query(
         `
         UPDATE applications
-        SET kyc_status='PENDING'
+        SET kyc_status='PAN_VERIFIED'
         WHERE application_id=$1
         `,
         [application_id]
