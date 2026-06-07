@@ -15,101 +15,139 @@ const {
 // PAN VERIFY
 // ======================================
 
-exports.verifyPANController = async (req, res) => {
-  try {
+exports.verifyPANController =
+  async (req, res) => {
 
-    const {
-      application_id,
-      pan,
-      name,
-      dob
-    } = req.body;
+    try {
 
-    if (
-      !application_id ||
-      !pan ||
-      !name ||
-      !dob
-    ) {
-      return res.status(400).json({
-        message: "All PAN details required",
-      });
-    }
+      const {
+        application_id,
+        pan,
+        name,
+        dob
+      } = req.body;
 
-    const response = await verifyPAN(
-      pan,
-      name,
-      dob
-    );
 
-    console.log(
-      "PAN RESPONSE:",
-      JSON.stringify(response, null, 2)
-    );
+      // -------------------------------
+      // VALIDATION
+      // -------------------------------
 
-    const panStatus =
-      response?.data?.status ||
-      response?.status;
+      if (
+        !application_id ||
+        !pan ||
+        !name ||
+        !dob
+      ) {
 
-    console.log(
-      "PAN STATUS:",
-      panStatus
-    );
+        return res.status(400).json({
+          message:
+            "All PAN details required",
+        });
+      }
 
-    if (
-      panStatus?.toUpperCase() !== "VALID"
-    ) {
+
+      // -------------------------------
+      // VERIFY PAN
+      // -------------------------------
+
+      const response =
+        await verifyPAN(
+          pan,
+          name,
+          dob
+        );
+
+
+      console.log(
+        "PAN RESPONSE:",
+        JSON.stringify(
+          response,
+          null,
+          2
+        )
+      );
+
+
+      // -------------------------------
+      // STATUS CHECK
+      // -------------------------------
+
+      const panStatus =
+        response?.data?.status ||
+        response?.status;
+
+
+      console.log(
+        "PAN STATUS:",
+        panStatus
+      );
+
+
+      if (
+        panStatus
+          ?.toUpperCase() !==
+        "VALID"
+      ) {
+
+        await db.query(
+          `
+          UPDATE applications
+          SET
+            status='REJECTED',
+            kyc_status='FAILED',
+            reason='PAN verification failed'
+          WHERE application_id=$1
+          `,
+          [application_id]
+        );
+
+        return res.json({
+
+          message:
+            "PAN verification failed",
+
+          application_status:
+            "REJECTED",
+        });
+      }
+
+
+      // -------------------------------
+      // UPDATE STATUS
+      // -------------------------------
 
       await db.query(
         `
         UPDATE applications
-        SET
-          status='REJECTED',
-          kyc_status='FAILED',
-          reason='PAN verification failed'
+        SET kyc_status='PENDING'
         WHERE application_id=$1
         `,
         [application_id]
       );
 
+
       return res.json({
-        message: "PAN verification failed",
-        application_status: "REJECTED",
+
+        message:
+          "PAN verified successfully",
+
+        pan_verified: true,
+      });
+
+    } catch (err) {
+
+      console.error(
+        "PAN ERROR:",
+        err
+      );
+
+      res.status(500).json({
+
+        message:
+          "PAN service error, try again",
       });
     }
-
-    // PAN SUCCESS
-    // KEEP KYC PENDING UNTIL AADHAAR VERIFIED
-
-    await db.query(
-      `
-      UPDATE applications
-      SET kyc_status='PENDING'
-      WHERE application_id=$1
-      `,
-      [application_id]
-    );
-
-    return res.json({
-      message:
-        "PAN verified successfully. Proceed with Aadhaar verification.",
-      pan_verified: true,
-      kyc_status: "PENDING",
-    });
-
-  } catch (err) {
-
-    console.error(
-      "PAN ERROR:",
-      err
-    );
-
-    res.status(500).json({
-      message:
-        "PAN service error, try again",
-    });
-  }
-};
+  };
 
 
 // ======================================
@@ -121,21 +159,33 @@ exports.sendAadhaarOTPController =
 
     try {
 
-      const { aadhaar } = req.body;
+      const { aadhaar } =
+        req.body;
 
       if (!aadhaar) {
+
         return res.status(400).json({
-          message: "Aadhaar required",
+          message:
+            "Aadhaar required",
         });
       }
 
+
       const response =
-        await sendAadhaarOTP(aadhaar);
+        await sendAadhaarOTP(
+          aadhaar
+        );
+
 
       console.log(
         "AADHAAR OTP RESPONSE:",
-        JSON.stringify(response, null, 2)
+        JSON.stringify(
+          response,
+          null,
+          2
+        )
       );
+
 
       return res.json(response);
 
@@ -147,7 +197,9 @@ exports.sendAadhaarOTPController =
       );
 
       res.status(500).json({
-        message: "Failed to send OTP",
+
+        message:
+          "Failed to send OTP",
       });
     }
   };
@@ -168,59 +220,71 @@ exports.verifyAadhaarOTPController =
         otp
       } = req.body;
 
+
+      // -------------------------------
+      // VALIDATION
+      // -------------------------------
+
       if (
         !application_id ||
         !reference_id ||
         !otp
       ) {
+
         return res.status(400).json({
+
           message:
             "Missing Aadhaar verification data",
         });
       }
 
-      // --------------------------------
-      // VALIDATE APPLICATION EXISTS
-      // --------------------------------
 
-      const application =
+      // -------------------------------
+      // CHECK PAN VERIFIED
+      // -------------------------------
+
+      const kycCheck =
         await db.query(
           `
-          SELECT
-            application_id,
-            status
+          SELECT kyc_status
           FROM applications
           WHERE application_id=$1
           `,
           [application_id]
         );
 
-      if (!application.rows.length) {
-        return res.status(404).json({
-          message:
-            "Application not found",
-        });
-      }
+
+      console.log(
+        "CURRENT KYC STATUS:",
+        kycCheck.rows[0]
+          ?.kyc_status
+      );
+
 
       if (
-        application.rows[0].status ===
-        "REJECTED"
+        kycCheck.rows[0]
+          ?.kyc_status !==
+        "PAN_VERIFIED"
       ) {
+
         return res.status(400).json({
+
           message:
-            "Application already rejected",
+            "Complete PAN verification first",
         });
       }
 
-      // --------------------------------
+
+      // -------------------------------
       // VERIFY OTP
-      // --------------------------------
+      // -------------------------------
 
       const result =
         await verifyAadhaarOTP(
           String(reference_id),
           String(otp)
         );
+
 
       console.log(
         "AADHAAR VERIFY RESPONSE:",
@@ -231,17 +295,25 @@ exports.verifyAadhaarOTPController =
         )
       );
 
+
+      // -------------------------------
+      // STATUS CHECK
+      // -------------------------------
+
       const aadhaarStatus =
         result?.data?.status ||
         result?.status;
+
 
       console.log(
         "AADHAAR STATUS:",
         aadhaarStatus
       );
 
+
       if (
-        aadhaarStatus?.toUpperCase() !==
+        aadhaarStatus
+          ?.toUpperCase() !==
         "VALID"
       ) {
 
@@ -258,15 +330,19 @@ exports.verifyAadhaarOTPController =
         );
 
         return res.json({
-          message: "KYC failed",
+
+          message:
+            "KYC failed",
+
           application_status:
             "REJECTED",
         });
       }
 
-      // --------------------------------
-      // KYC COMPLETE
-      // --------------------------------
+
+      // -------------------------------
+      // UPDATE STATUS
+      // -------------------------------
 
       await db.query(
         `
@@ -279,14 +355,16 @@ exports.verifyAadhaarOTPController =
         [application_id]
       );
 
-      // --------------------------------
+
+      // -------------------------------
       // SEND TO ORCHESTRATOR
-      // --------------------------------
+      // -------------------------------
 
       const orchestratorResult =
         await sendToOrchestrator(
           application_id
         );
+
 
       return res.json({
 
@@ -294,9 +372,6 @@ exports.verifyAadhaarOTPController =
           "KYC successful",
 
         aadhaar_verified: true,
-
-        kyc_status:
-          "VERIFIED",
 
         orchestrator_result:
           orchestratorResult
@@ -309,6 +384,7 @@ exports.verifyAadhaarOTPController =
         error
       );
 
+
       await db.query(
         `
         UPDATE applications
@@ -318,7 +394,9 @@ exports.verifyAadhaarOTPController =
         [req.body.application_id]
       );
 
+
       res.status(500).json({
+
         message:
           "KYC service error, try again",
       });
