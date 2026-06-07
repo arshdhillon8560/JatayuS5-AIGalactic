@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import virtusaLogo from "../assets/virtusa_logo.png";
+import Logo from "../assets/logo.png";
 
 export default function Header({
   showBack = true,
@@ -21,7 +21,7 @@ export default function Header({
       <div className="max-w-7xl mx-auto px-6 md:px-8 py-3.5 flex items-center justify-between">
         {/* Left */}
         <div className="flex items-center gap-4">
-          <img src={virtusaLogo} alt="Jatayu" className="h-8 object-contain" />
+          <img src={Logo} alt="Jatayu" className="h-8 object-contain" />
           {showBack && (
             <button
               onClick={() => navigate(backPath)}

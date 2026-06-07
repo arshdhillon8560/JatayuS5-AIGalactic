@@ -422,7 +422,7 @@ export const Login = () => {
               <img src={favicon} alt="Logo" width="20" height="20" />
             </div>
             <span className="liq-nav-brand-text">
-              Virtusa <span>Smart Loan </span>
+              Jatayu <span>Smart Loan </span>
             </span>
           </div>
 

@@ -70,7 +70,7 @@ const AppNavbar = ({ onLogout }) => (
     <div className="flex items-center gap-3">
       <img
         src={favicon}
-        alt="Virtusa"
+        alt="logo"
         className="h-7 brightness-0 invert opacity-90"
       />
       <div

@@ -5,7 +5,7 @@ import { Eye, EyeOff, TrendingUp, Shield, Zap } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 
-import virtusaLogo from "../assets/virtusa_logo.png";
+import Logo from "../assets/logo.png";
 
 export default function SignupPage() {
   const [form, setForm] = useState({
@@ -79,7 +79,7 @@ export default function SignupPage() {
         {/* LOGO */}
 
         <img
-          src={virtusaLogo}
+          src={Logo}
           alt="Jatayu"
           className="h-10 object-contain object-left relative z-10 brightness-0 invert"
         />
@@ -134,7 +134,7 @@ export default function SignupPage() {
         </div>
 
         <p className="text-white/25 text-xs relative z-10">
-          © 2026 Virtusa Jatayu. All rights reserved.
+          © 2026 Jatayu. All rights reserved.
         </p>
       </div>
 
@@ -146,7 +146,7 @@ export default function SignupPage() {
 
           <div className="lg:hidden mb-10 flex justify-center">
             <img
-              src={virtusaLogo}
+              src={Logo}
               alt="Jatayu"
               className="h-10 object-contain"
             />
