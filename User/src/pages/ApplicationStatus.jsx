@@ -243,7 +243,7 @@ export default function ApplicationStatus() {
                 : isRejected
                   ? "Application Rejected"
                   : isEscalated
-                    ? "Manual Review Required"
+                    ? "Application Under Officer Review"
                     : "Application Under Review"}
             </h1>
 
@@ -280,7 +280,7 @@ export default function ApplicationStatus() {
               KYC Status
             </p>
 
-            <StatusBadge status={status.kyc_status} />
+            <StatusBadge status={(status.kyc_status==="PAN_VERIFIED")?"PENDING":status.kyc_status} />
           </div>
 
           <div className="card p-5">
