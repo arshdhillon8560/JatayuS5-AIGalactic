@@ -335,7 +335,7 @@ export default function ApplicationStatus() {
         <div className="flex justify-end gap-3 mb-5 fade-up-3">
           {/* COMPLETE KYC BUTTON */}
 
-          {status.kyc_status === "PENDING" && (
+          {status.kyc_status === "PENDING" || status.kyc_status === "PAN_VERIFIED" && (
             <button
               onClick={() => navigate(`/kyc/${id}`)}
               className="btn-primary"
