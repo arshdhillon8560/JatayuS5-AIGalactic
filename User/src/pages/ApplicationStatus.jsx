@@ -280,7 +280,7 @@ export default function ApplicationStatus() {
               KYC Status
             </p>
 
-            <StatusBadge status={(status.kyc_status==="PAN VERIFIED")?"PENDING":status.kyc_status} />
+            <StatusBadge status={(status.kyc_status==="PAN_VERIFIED")?"PENDING":status.kyc_status} />
           </div>
 
           <div className="card p-5">
@@ -335,7 +335,7 @@ export default function ApplicationStatus() {
         <div className="flex justify-end gap-3 mb-5 fade-up-3">
           {/* COMPLETE KYC BUTTON */}
 
-          {status.kyc_status === "PENDING" || status.kyc_status === "PAN_VERIFIED" && (
+          {(status.kyc_status === "PENDING" || status.kyc_status === "PAN_VERIFIED") && (
             <button
               onClick={() => navigate(`/kyc/${id}`)}
               className="btn-primary"
