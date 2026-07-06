@@ -11,6 +11,7 @@ from services.ml_service import get_scores
 
 from agents.ocr_agent import extract_text_s3
 from agents.llm_parser_agent import parse_document
+from agents.identity_verification_agent import verify_identity
 from agents.document_consistency_agent import check_all_documents
 from agents.feature_engineering_agent import build_ml_input
 from agents.decision_agent import make_decision
@@ -116,6 +117,36 @@ def process(data: dict):
                 )
 
         logging.info(f"PARSED DOCS: {parsed_docs}")
+
+        # =========================
+        # IDENTITY VERIFICATION
+        # =========================
+
+        identity_verified, identity_reason = verify_identity(
+            db.get("profile", {}),
+            parsed_docs
+        )
+
+        print("\n🔍 Identity Verification:", identity_reason)
+
+        if not identity_verified:
+
+            update_application_status(
+                app_id,
+                "REJECTED",
+                identity_reason,
+                "HIGH"
+            )
+
+            return {
+              "application_id": app_id,
+              "decision": "REJECTED",
+              "reason": identity_reason,
+              "stage": "Identity Verification"
+              
+            }
+
+
 
         # =========================
         # MERGE DOC DATA

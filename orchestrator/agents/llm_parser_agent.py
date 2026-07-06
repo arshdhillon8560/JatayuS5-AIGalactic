@@ -6,13 +6,11 @@ from groq import Groq
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-
 def clean_number(val):
     try:
         return int(float(val.replace(",", "")))
     except:
         return None
-
 
 
 def detect_document_type(text):
@@ -33,21 +31,36 @@ def detect_document_type(text):
     return "unknown"
 
 
-
 def extract_name(text):
+
+    INVALID_NAMES = {
+        "address",
+        "india",
+        "government",
+        "govt",
+        "department",
+        "income tax",
+        "permanent account number",
+        "father",
+        "surname",
+        "dob"
+    }
+
     patterns = [
         r"Name\s*[:\-]?\s*([A-Za-z ]+)",
         r"Name\s*\n\s*([A-Za-z ]+)"
     ]
 
-    for p in patterns:
-        match = re.search(p, text, re.I)
+    for pattern in patterns:
+        match = re.search(pattern, text, re.I)
         if match:
             name = match.group(1).strip()
-
-            # avoid common OCR mistakes
-            if name.lower() not in ["address", "india", "government"]:
-                return name
+            if (
+                len(name) < 4 or
+                name.lower() in INVALID_NAMES
+            ):
+                continue
+            return name
 
     return None
 
@@ -58,8 +71,35 @@ def extract_pan(text):
 
 
 def extract_aadhaar(text):
-    matches = re.findall(r"\b\d{12}\b", text)
-    return matches[-1] if matches else None
+    """
+    Extract Aadhaar only if it appears near the word
+    Aadhaar/Aadhar. This avoids confusing UAN,
+    Account Numbers and other 12-digit IDs.
+    """
+
+    patterns = [
+
+        # Aadhaar Number : 123456789012
+        r"Aadhaar(?:\s*Number)?\s*[:\-]?\s*(\d{12})",
+
+        # Aadhar Number : 123456789012
+        r"Aadhar(?:\s*Number)?\s*[:\-]?\s*(\d{12})",
+
+        # Aadhaar No. : 123456789012
+        r"Aadhaar\s*No\.?\s*[:\-]?\s*(\d{12})",
+
+        # Aadhar No. : 123456789012
+        r"Aadhar\s*No\.?\s*[:\-]?\s*(\d{12})"
+    ]
+
+    for pattern in patterns:
+
+        match = re.search(pattern, text, re.I)
+
+        if match:
+            return match.group(1)
+
+    return None
 
 
 def extract_account(text):
@@ -69,9 +109,7 @@ def extract_account(text):
     return match.group(1) if match else None
 
 
-
 def extract_salary(text):
-
     patterns = [
         r"NET SALARY.*?([\d,]+\.\d+)",
         r"Net Salary.*?([\d,]+\.\d+)",
@@ -86,54 +124,44 @@ def extract_salary(text):
     return None
 
 
-
 def extract_property(text):
-
     match = re.search(r"₹\s*([\d,]+)", text)
-
     if match:
         return clean_number(match.group(1))
-
     return None
 
 
-
 def extract_balance_history(text):
-
     balances = []
     lines = text.split("\n")
 
     for line in lines:
-
-        
         if re.search(r"\d{2}[-\s][A-Za-z]{3}[-\s]\d{4}", line):
-
             nums = re.findall(r"[\d,]+\.\d+", line)
-
             if nums:
                 val = clean_number(nums[-1])
-
                 if val and 10000 < val < 10000000:
                     balances.append(val)
 
-    
     if len(balances) < 5:
         print("⚠️ fallback balance parsing...")
-
         nums = re.findall(r"[\d,]+\.\d+", text)
         cleaned = [clean_number(n) for n in nums]
-
-        balances = [
-            x for x in cleaned
-            if x and 50000 < x < 10000000
-        ]
+        balances = [x for x in cleaned if x and 50000 < x < 10000000]
 
     print("💰 Extracted balances:", balances)
-
     return balances[-12:]
 
 
 def extract_buyer_details(text):
+    INVALID_NAMES = {
+        "address",
+        "india",
+        "government",
+        "govt",
+        "department",
+        "income tax"
+    }
 
     section = re.search(
         r"BUYER DETAILS(.*?)(PROPERTY DETAILS|CONSIDERATION)",
@@ -146,12 +174,16 @@ def extract_buyer_details(text):
 
     block = section.group(1)
 
-    name = re.search(r"Name\s*[:\-]?\s*([A-Za-z ]+)", block)
+    name_match = re.search(r"Name\s*[:\-]?\s*([A-Za-z ]+)", block)
+    name = name_match.group(1).strip() if name_match else None
+    if name and name.lower() in INVALID_NAMES:
+        name = None
+
     pan = re.search(r"[A-Z]{5}[0-9]{4}[A-Z]", block)
     aadhaar = re.search(r"\b\d{12}\b", block)
 
     return (
-        name.group(1).strip() if name else None,
+        name,
         pan.group(0) if pan else None,
         aadhaar.group(0) if aadhaar else None
     )
@@ -166,7 +198,6 @@ def safe_json_parse(text):
 
 
 def parse_with_llm(text):
-
     prompt = f"""
 Extract structured JSON from OCR text.
 
@@ -201,9 +232,7 @@ TEXT:
     return safe_json_parse(res.choices[0].message.content)
 
 
-
 def parse_document(text):
-
     doc_type = detect_document_type(text)
     print("📄 Document Type:", doc_type)
 
@@ -224,15 +253,15 @@ def parse_document(text):
         income = extract_salary(text)
 
     elif doc_type == "itr":
-
-        name_match = re.search(r"Name\s*\n\s*([A-Za-z ]+)", text)
-        if name_match:
-            name = name_match.group(1).strip()
-
+        name = extract_name(text)
         pan = extract_pan(text)
         account = extract_account(text)
 
-        match = re.search(r"Total Income.*?([\d,]+)", text, re.I)
+        match = re.search(
+            r"Total Income.*?([\d,]+)",
+            text,
+            re.I
+        )
         if match:
             income = clean_number(match.group(1))
 
@@ -250,7 +279,28 @@ def parse_document(text):
         "bank_balance_history": balances
     }
 
-    if doc_type != "bank" and (not data["name"] or not data["pan"]):
+    invalid_names = {
+        "address",
+        "india",
+        "government",
+        "govt",
+        "department",
+        "income tax"
+    }
+
+    # Force invalid placeholder names to None
+    if (
+        data["name"]
+        and data["name"].strip().lower() in invalid_names
+    ):
+        data["name"] = None
+
+    needs_llm = (
+        not data["name"] or
+        not data["pan"]
+    )
+
+    if doc_type != "bank" and needs_llm:
         print("⚠️ LLM fallback triggered...")
         llm_data = parse_with_llm(text)
 
