@@ -51,7 +51,7 @@ export default function LoginPage() {
         <img
           src={Logo}
           alt="Jatayu"
-          className="h-10 object-contain object-left relative z-10 brightness-0 invert"
+          className="h-14 object-contain object-left relative z-10 brightness-0 invert"
         />
 
         <div className="relative z-10">
@@ -63,7 +63,7 @@ export default function LoginPage() {
             <br />
             <span className="text-sky-200">& Reach Your Dream</span>
           </h1>
-          <p className="text-white/60 text-lg mb-10">
+          <p className="text-white/60 text-lg mb-12">
             AI-powered loan approval — fast, fair, transparent.
           </p>
 

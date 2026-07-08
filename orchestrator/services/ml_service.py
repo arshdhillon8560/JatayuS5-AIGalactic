@@ -93,4 +93,4 @@ def get_scores(data):
     print("\n📥 CREDIT RESPONSE:", credit)
     print("📥 FRAUD RESPONSE:", fraud)
 
-    return credit, fraud
+    return credit, fraud, True, None

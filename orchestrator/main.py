@@ -207,7 +207,24 @@ def process(data: dict):
         # ML API CALLS
         # =========================
 
-        credit, fraud = get_scores(ml_input)
+        credit, fraud, ml_available, ml_error = get_scores(ml_input)
+
+        if not ml_available:
+
+            update_application_status(
+                app_id,
+                "ESCALATED",
+                f"ML Service Failed: {ml_error}",
+                "UNKNOWN"
+            )
+
+            return {
+                "application_id": app_id,
+                "decision": "ESCALATED",
+                "reason": "ML service unavailable",
+                "details": ml_error,
+                "stage": "ML Assessment"
+            }
 
         print("\n📥 CREDIT:", credit)
         print("📥 FRAUD:", fraud)
