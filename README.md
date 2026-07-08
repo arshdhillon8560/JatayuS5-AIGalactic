@@ -24,9 +24,11 @@ The Agentic AI Loan Approval System automates the entire loan approval workflow:
 🤖 Orchestrator (AI Agent Pipeline)
     ├─ 📄 OCR Agent (Extract text from documents)
     ├─ 🧠 LLM Parser (Structure unstructured data)
-    ├─ ✓ Validators (Check consistency & accuracy)
+    ├─ 🔐 Identity Verification Agent (Validate KYC identity details)
+    ├─ ✓ Consistency Agent (Cross-check documents and verified identity)
     ├─ 💼 Employment Agent (Verify job history)
-    └─ 📊 Feature Engineer (Compute financial metrics)
+    ├─ 📊 Feature Engineer (Compute financial metrics)
+    └─ 🎯 Decision Agent (Apply final approval logic)
     ↓
 🎯 ML Service (Credit & Fraud Scoring)
     ↓
@@ -191,10 +193,10 @@ The application process is structured in clear steps:
   - Employment: Company name, tenure, designation
   - Bank: Account number, balance history
 
-**Document Validators**
-- Validates critical financial fields
-- Checks data type and format consistency
-- Identifies missing required information
+**Identity Verification Agent**
+- Validates applicant identity using KYC-backed details
+- Confirms name, PAN, and Aadhaar against verified profile data
+- Prevents mismatched or suspicious identities from progressing further
 
 **Consistency Agent**
 - First uses KYC verification to confirm the applicant's identity details
@@ -389,6 +391,7 @@ Agentic AI Loan Approval System/
 │   ├── agents/                       # AI Agent implementations
 │   │   ├── ocr_agent.py             # AWS Textract OCR extraction
 │   │   ├── llm_parser_agent.py      # Groq LLM document parsing
+│   │   ├── identity_verification_agent.py # KYC-based identity verification
 │   │   ├── feature_engineering_agent.py # ML feature computation
 │   │   ├── document_consistency_agent.py # Cross-doc validation
 │   │   ├── employment_agent.py      # Employment verification
