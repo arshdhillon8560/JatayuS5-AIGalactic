@@ -2,7 +2,9 @@
 
 An intelligent, production-ready loan approval platform that combines **AI Agents**, **Machine Learning**, and **Document Intelligence** to automate 80%+ of loan approvals while maintaining human oversight for complex cases. The system processes loan applications through a sophisticated multi-agent pipeline that evaluates loan eligibility through document analysis, credit scoring, fraud detection, and employment verification.
 
-**Status:** ✅ Production Ready | **Version:** 1.0.0
+**Status:** 🚧 Active development | **Version:** 1.0.0
+
+This repository contains a Node.js/Express backend, two React frontends, a FastAPI orchestrator, and a Python-based ML inference service for loan risk assessment.
 
 Deployed User Dashboard : https://blue-island-02963e500.7.azurestaticapps.net
 
@@ -195,9 +197,10 @@ The application process is structured in clear steps:
 - Identifies missing required information
 
 **Consistency Agent**
-- Cross-validates information across documents
-- Detects discrepancies between documents
-- Flags suspicious patterns (income mismatches, etc.)
+- First uses KYC verification to confirm the applicant's identity details
+- Then matches those verified details against OCR-parsed data from uploaded documents
+- Performs cross-validation of applicant name, PAN, and Aadhaar to improve consistency and identification accuracy
+- Detects discrepancies between documents and flags suspicious patterns (income mismatches, identity mismatches, etc.)
 
 **Employment Agent**
 - Verifies minimum employment history
@@ -246,6 +249,9 @@ ELSE IF pd_score > 0.6
 ELSE IF employment_not_verified
   → ESCALATED (Manual review required)
 
+ELSE IF ML service fails or is unavailable
+  → ESCALATED (Manual review required)
+
 ELSE IF 0.4 < pd_score ≤ 0.6
   → ESCALATED (Borderline risk - officer review)
 
@@ -275,19 +281,18 @@ Applicants can:
 
 ## 📊 Technology Stack
 
-| Component | Technology | Version | Purpose |
-|-----------|-----------|---------|---------|
-| **Backend API** | Node.js + Express.js | 18.x + 5.2 | RESTful API, Auth, Data Management |
-| **Frontend (User)** | React + TypeScript + Vite | 18.2 + 5.x | Applicant Portal UI |
-| **Frontend (Officer)** | React + Tailwind CSS | 19.2 + 4.2 | Officer Dashboard UI |
-| **Orchestrator** | FastAPI + Python | 0.111 + 3.8+ | AI Agent Pipeline |
-| **ML Service** | FastAPI + scikit-learn + XGBoost | 0.111 + 1.5 + 2.0 | ML Predictions |
-| **Database** | PostgreSQL | 12+ | Primary data store (Neon Cloud) |
-| **Cloud Storage** | AWS S3 | - | Document storage |
-| **OCR Service** | AWS Textract | - | Document text extraction |
-| **LLM Service** | Groq API | - | Document parsing & NLP |
-| **Authentication** | JWT + bcryptjs | 9.0 + 3.0 | Secure authentication |
-| **File Upload** | Multer + AWS SDK | 2.1 + 2.x | File handling |
+| Component | Technology | Notes |
+|-----------|-----------|-------|
+| **Backend API** | Node.js + Express.js | Handles auth, application flow, KYC, and officer actions |
+| **Frontend (User)** | React + Vite | Applicant portal for applying and tracking loan status |
+| **Frontend (Officer)** | React + Vite + Tailwind CSS | Officer dashboard for reviewing escalated cases |
+| **Orchestrator** | FastAPI + Python | Runs the document-processing and decision pipeline |
+| **ML Service** | FastAPI + Python | Serves credit and fraud scoring endpoints |
+| **Database** | PostgreSQL | Stores users, applications, profiles, and results |
+| **Cloud Storage** | AWS S3 | Stores uploaded documents |
+| **OCR / LLM** | AWS Textract + Groq | Extracts and structures document content |
+| **Authentication** | JWT + bcryptjs | Secures backend APIs |
+| **File Upload** | Multer + AWS SDK | Supports document upload and storage |
 
 ---
 
@@ -603,14 +608,20 @@ uvicorn api.ml_api:app --port 8000 --reload
 ```bash
 cd User
 npm run dev
-# Runs on http://localhost:5173
+# Defaults to http://localhost:5173
 ```
 
 **Terminal 5: Officer Portal**
 ```bash
 cd Officer
 npm run dev
-# Runs on http://localhost:5174
+# Defaults to the next available Vite port if 5173 is already in use
+```
+
+If you prefer to pin the ports explicitly, run:
+```bash
+cd User && npm run dev -- --port 5173
+cd Officer && npm run dev -- --port 5174
 ```
 
 ### All Services Running
@@ -620,7 +631,7 @@ npm run dev
 ✅ Orchestrator:    http://localhost:9000
 ✅ ML Service:      http://localhost:8000
 ✅ User Portal:     http://localhost:5173
-✅ Officer Portal:  http://localhost:5174
+✅ Officer Portal:  http://localhost:5174 (or the next available Vite port)
 ✅ Database:        localhost:5432
 ```
 
